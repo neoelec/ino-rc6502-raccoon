@@ -1,0 +1,48 @@
+# Compiled Object & Intermediate Files
+*.o
+*.a
+*.so
+*.d
+*.obj
+*.lst
+*.map
+*.sym
+*.lss
+*.eep
+
+# Binary & Firmware Build Outputs
+*.elf
+*.hex
+build/
+.build/
+dist/
+out/
+
+# Allow tracked ROM binaries
+!rom/**/*.bin
+
+# Arduino IDE / CLI & Temporary Files
+*.tmp
+*.bak
+*.orig
+*.rej
+*.patch
+*.diff
+*.log
+
+# Editor & IDE Configuration
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.agents/
+
+# OS Generated Files
+.DS_Store
+Thumbs.db
+ehthumbs.db
+
+# Scratch & Temporary Directories
+scratch/
+tmp/

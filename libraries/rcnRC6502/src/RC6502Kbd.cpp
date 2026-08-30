@@ -41,6 +41,9 @@ void RC6502Kbd::run(void)
   case State::PollClear:
     handlePollClear();
     break;
+  case State::Timeout:
+    handleTimeout();
+    break;
   }
 }
 
@@ -140,9 +143,8 @@ void RC6502Kbd::handleWaitInt(void)
     // Timeout safeguard: if target 6502 CPU does not acknowledge within 100ms
     if (millis() - strobe_start_ms_ > 100)
     {
-      digitalWrite(PIN_KBD_STR, LOW);
-      interrupt_ = false;
-      state_ = State::Idle;
+      state_ = State::Timeout;
+      handleTimeout();
     }
     return;
   }
@@ -161,10 +163,18 @@ void RC6502Kbd::handlePollClear(void)
     // Timeout safeguard: if KBD_CLR does not return LOW within 200ms
     if (millis() - strobe_start_ms_ > 200)
     {
-      state_ = State::Idle;
+      state_ = State::Timeout;
+      handleTimeout();
     }
     return;
   }
 
+  state_ = State::Idle;
+}
+
+void RC6502Kbd::handleTimeout(void)
+{
+  digitalWrite(PIN_KBD_STR, LOW);
+  interrupt_ = false;
   state_ = State::Idle;
 }

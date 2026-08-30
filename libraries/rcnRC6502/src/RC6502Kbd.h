@@ -19,7 +19,8 @@ public:
     Idle,
     Write,
     WaitInt,
-    PollClear
+    PollClear,
+    Timeout
   };
 
   void begin(Adafruit_MCP23X17 *mcp);
@@ -39,6 +40,7 @@ private:
   void handleWrite(void);
   void handleWaitInt(void);
   void handlePollClear(void);
+  void handleTimeout(void);
 
 private:
   Adafruit_MCP23X17 *mcp_{nullptr};

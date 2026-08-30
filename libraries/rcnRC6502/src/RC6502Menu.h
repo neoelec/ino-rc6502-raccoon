@@ -21,10 +21,15 @@ public:
   enum class State : uint8_t
   {
     Command,
-    PromptDirNumber,
-    PromptPageNumber,
-    PromptPgmNumber
+    PromptPrefix,
+    PromptLoad,
+    PromptInfo,
+    PromptMemory,
+    CatalogPaging,
+    PrefixPaging
   };
+
+  static constexpr uint8_t PGM_PER_PAGE = 16;
 
   void begin(RC6502Dev &dev);
   void enter(void);
@@ -40,10 +45,26 @@ private:
   void printPrompt(void);
   void handleCommand(char c);
   void handleInputPrompt(char c);
+  void handleCatalogPagingInput(char c);
+  void handlePrefixPagingInput(char c);
   void processPromptSubmit(void);
-  void printWrongValue(long val, long min_val, long max_val);
   void startPrompt(State next_state, const __FlashStringHelper *prompt_msg);
-  void listPrograms(uint16_t page_number, uint16_t pgm_per_page);
+
+  uint16_t countCatalogEntries(void);
+  uint16_t countPrefixEntries(void);
+  void listCatalogPage(uint16_t page_num);
+  void listPrefixesPage(uint16_t page_num);
+  bool resolvePrefix(const char *input, char *out_prefix, size_t max_len);
+  void executeLoad(const char *query);
+  void executeSetPrefix(const char *input);
+  void displayProgramInfo(const char *query);
+
+  void doCmdCatalog(void);
+  void doCmdPrefix(void);
+  void doCmdLoad(void);
+  void doCmdInfo(void);
+  void doCmdMemory(void);
+  void doCmdTerse(void);
 
 private:
   RC6502Clock *clock_{nullptr};
@@ -52,12 +73,18 @@ private:
   RC6502Video *video_{nullptr};
 
   bool done_{true};
+  bool terse_mode_{false};
   State state_{State::Command};
-  char input_buf_[8]{0};
+  char input_buf_[32]{0};
   uint8_t input_len_{0};
 
+  uint16_t cat_page_{0};
+  uint16_t cat_total_entries_{0};
+  uint16_t pfx_page_{0};
+  uint16_t pfx_total_entries_{0};
+
   RC6502Pgm pgm_;
-  uint8_t dir_number_{0};
+  char prefix_[32]{"SYSTEM"};
 };
 
 extern RC6502MenuClass RC6502Menu;

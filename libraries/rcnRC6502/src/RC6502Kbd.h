@@ -27,6 +27,7 @@ public:
   void reset(void);
   bool isBufferEmpty(void);
   bool isBufferFull(void);
+  bool isIdle(void);
   int popFromBuffer(void);
   void pushToBuffer(int ch);
   void run(void);

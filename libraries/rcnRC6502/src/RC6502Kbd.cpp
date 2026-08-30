@@ -85,6 +85,11 @@ bool RC6502Kbd::isBufferEmpty(void)
   return serial_buf_.isEmpty();
 }
 
+bool RC6502Kbd::isIdle(void)
+{
+  return serial_buf_.isEmpty() && state_ == State::Idle;
+}
+
 void RC6502Kbd::initMcp(void)
 {
   if (!mcp_)

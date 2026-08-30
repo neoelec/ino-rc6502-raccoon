@@ -50,6 +50,9 @@ bool RC6502Loader::load(RC6502Sd *sd, RC6502Kbd *kbd, RC6502Video *video, const 
     return false;
   }
 
+  // Actively pump video output until 6502 echo settles (quiet for 250ms)
+  drainVideo(kbd, video, 250, 2000);
+
   Serial.println();
   pgm.printProgram();
   Serial.println();
@@ -236,9 +239,37 @@ void RC6502Loader::busyWaitConsole(RC6502Kbd *kbd, RC6502Video *video)
     return;
   }
 
-  while (!kbd->isBufferEmpty())
+  while (!kbd->isIdle())
   {
     kbd->run();
     video->run();
+  }
+}
+
+void RC6502Loader::drainVideo(RC6502Kbd *kbd, RC6502Video *video, uint32_t quiet_ms, uint32_t max_wait_ms)
+{
+  if (!kbd || !video)
+  {
+    return;
+  }
+
+  // Ensure keyboard transmission pipeline is fully drained to Idle state
+  while (!kbd->isIdle())
+  {
+    kbd->run();
+    video->run();
+  }
+
+  // Actively pump video output until the line has been quiet for quiet_ms
+  uint32_t start_ms = millis();
+  uint32_t last_activity_ms = millis();
+
+  while ((millis() - last_activity_ms < quiet_ms) && (millis() - start_ms < max_wait_ms))
+  {
+    kbd->run();
+    if (video->run())
+    {
+      last_activity_ms = millis();
+    }
   }
 }

@@ -11,7 +11,7 @@ class RC6502Video
 public:
   void begin(Adafruit_MCP23X17 *mcp);
   void reset(void);
-  void run(void);
+  bool run(void);
   void setInterrupt(void);
 
 private:

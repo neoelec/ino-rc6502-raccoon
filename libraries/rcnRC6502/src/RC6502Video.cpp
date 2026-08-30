@@ -26,7 +26,7 @@ void RC6502Video::setInterrupt(void)
   interrupt_ = true;
 }
 
-void RC6502Video::run(void)
+bool RC6502Video::run(void)
 {
   digitalWrite(PIN_VIDEO_nRDA, HIGH);
 
@@ -42,7 +42,10 @@ void RC6502Video::run(void)
 
     // Acknowledge read by asserting nRDA LOW (Non-blocking)
     digitalWrite(PIN_VIDEO_nRDA, LOW);
+    return true;
   }
+
+  return false;
 }
 
 void RC6502Video::initMcp(void)

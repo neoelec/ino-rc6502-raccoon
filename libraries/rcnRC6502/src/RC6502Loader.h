@@ -25,6 +25,7 @@ private:
   void feedHexAddress(RC6502Kbd *kbd, RC6502Video *video, uint16_t addr);
   void feedCharPipelined(RC6502Kbd *kbd, RC6502Video *video, char c);
   void busyWaitConsole(RC6502Kbd *kbd, RC6502Video *video);
+  void drainVideo(RC6502Kbd *kbd, RC6502Video *video, uint32_t quiet_ms = 250, uint32_t max_wait_ms = 2000);
 };
 
 #endif // RCN_RC6502_LOADER_H

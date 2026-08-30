@@ -285,6 +285,7 @@ void RC6502MenuClass::doCmdPIOReset(void)
   Serial.println();
   Serial.println(F("RCN: PIO reset ..."));
   Serial.flush();
+  cli();
   wdt_enable(WDTO_15MS);
   while (true)
   {

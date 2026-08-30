@@ -17,7 +17,7 @@ constexpr uint8_t PIN_SD_nSS         = 7;  // Micro-SD SPI Chip Select
 constexpr uint8_t PIN_nRESET         = 8;  // 6502 CPU Hardware Reset Output
 constexpr uint8_t PIN_CLK_1MHZ       = 9;  // Timer1 OC1A: 1MHz Clock Output
 constexpr uint8_t PIN_MCP23S17_nSS   = 10; // MCP23S17 SPI Chip Select
-constexpr uint8_t PIN_PIO_MODE       = A7; // Mode Select Pin (Analog Input)
+constexpr uint8_t PIN_PIO_MODE       = A7; // Mode Select Pin (Analog Input only: ATmega328P A6/A7 have no digital I/O)
 
 // MCP23S17 Port A Pin Mapping (Video Data Input)
 constexpr uint8_t PIN_VIDEO_D0       = 0;  // Port A0 (Bit 0)

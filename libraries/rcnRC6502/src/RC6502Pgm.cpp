@@ -10,22 +10,30 @@
 #include "RC6502Pgm.h"
 #include "RC6502Utils.h"
 
-#define SZ_BUF 32
 #define SZ_CSV_BUF 64
 
 #define CSV_NAME_FMT "yy/PGMxxx.CSV"
 
-static void trimTrailing(char *str)
+static char *trimWhitespace(char *str)
 {
   if (!str)
   {
-    return;
+    return nullptr;
+  }
+  while (*str && (*str == ' ' || *str == '\t' || *str == '\r' || *str == '\n'))
+  {
+    str++;
+  }
+  if (*str == '\0')
+  {
+    return str;
   }
   size_t len = strlen(str);
   while (len > 0 && (str[len - 1] == '\r' || str[len - 1] == '\n' || str[len - 1] == ' ' || str[len - 1] == '\t'))
   {
     str[--len] = '\0';
   }
+  return str;
 }
 
 bool RC6502Pgm::begin(RC6502Sd *sd)
@@ -146,24 +154,38 @@ bool RC6502Pgm::readCsv(char *csv, uint8_t sz_csv, const char *csv_name)
 
 void RC6502Pgm::parseCsv(char *csv)
 {
+  if (!csv)
+  {
+    return;
+  }
+
+  // Truncate at first newline to ensure clean single-line parsing
+  char *newline = strpbrk(csv, "\r\n");
+  if (newline)
+  {
+    *newline = '\0';
+  }
+
   static const char *delim = ",";
   char *ptr = csv;
   char *token;
   uint8_t i = 0;
 
-  token = strsep(&ptr, delim);
-  while (token)
+  while ((token = strsep(&ptr, delim)) != nullptr)
   {
+    token = trimWhitespace(token);
     parseToken(token, i++);
-    token = strsep(&ptr, delim);
   }
 }
 
 void RC6502Pgm::parseToken(char *token, uint8_t i)
 {
-  long tmp;
+  if (!token)
+  {
+    return;
+  }
 
-  trimTrailing(token);
+  unsigned long tmp;
 
   switch (i)
   {
@@ -197,12 +219,12 @@ void RC6502Pgm::parseToken(char *token, uint8_t i)
     }
     break;
   case 3: // load_address_
-    tmp = strtol(token, nullptr, 16);
-    load_address_ = static_cast<uint16_t>(tmp);
+    tmp = strtoul(token, nullptr, 16);
+    load_address_ = (tmp <= 0xFFFFUL) ? static_cast<uint16_t>(tmp) : 0x0000;
     break;
   case 4: // run_address_
-    tmp = strtol(token, nullptr, 16);
-    run_address_ = static_cast<uint16_t>(tmp);
+    tmp = strtoul(token, nullptr, 16);
+    run_address_ = (tmp <= 0xFFFFUL) ? static_cast<uint16_t>(tmp) : 0x0000;
     break;
   }
 }
@@ -244,6 +266,15 @@ bool RC6502Pgm::beginCsvName(const char *csv_name)
 
 void RC6502Pgm::updateCsvName(char *csv_name, uint8_t dir_number, uint16_t pgm_number)
 {
+  if (dir_number > 99)
+  {
+    dir_number = 99;
+  }
+  if (pgm_number > 999)
+  {
+    pgm_number = 999;
+  }
+
   csv_name[0] = static_cast<char>((dir_number / 10) + '0');
   csv_name[1] = static_cast<char>((dir_number % 10) + '0');
 

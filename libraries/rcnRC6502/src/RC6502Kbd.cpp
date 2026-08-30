@@ -68,7 +68,7 @@ void RC6502Kbd::pushToBuffer(int c)
   serial_buf_.push(static_cast<uint8_t>(c));
 }
 
-bool RC6502Kbd::isBufferFull(void)
+bool RC6502Kbd::isBufferFull(void) noexcept
 {
   return serial_buf_.isFull();
 }
@@ -80,12 +80,12 @@ int RC6502Kbd::popFromBuffer(void)
   return static_cast<int>(c);
 }
 
-bool RC6502Kbd::isBufferEmpty(void)
+bool RC6502Kbd::isBufferEmpty(void) noexcept
 {
   return serial_buf_.isEmpty();
 }
 
-bool RC6502Kbd::isIdle(void)
+bool RC6502Kbd::isIdle(void) noexcept
 {
   return serial_buf_.isEmpty() && state_ == State::Idle;
 }

@@ -25,9 +25,9 @@ public:
 
   void begin(Adafruit_MCP23X17 *mcp);
   void reset(void);
-  bool isBufferEmpty(void);
-  bool isBufferFull(void);
-  bool isIdle(void);
+  bool isBufferEmpty(void) noexcept;
+  bool isBufferFull(void) noexcept;
+  bool isIdle(void) noexcept;
   int popFromBuffer(void);
   void pushToBuffer(int ch);
   void run(void);

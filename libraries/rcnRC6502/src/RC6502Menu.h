@@ -6,7 +6,7 @@
 
 #include <stdint.h>
 
-#include <SerialMenuCmd.h>
+#include <Arduino.h>
 
 #include "RC6502Dev.h"
 #include "RC6502Kbd.h"
@@ -21,7 +21,6 @@ public:
   void begin(RC6502Dev &dev);
   void enter(void);
   bool run(void);
-  SerialMenuCmd *getMenuCmd(void);
   void doCmdHelp(void);
   void doCmdExit(void);
   void doCmdListPrograms(void);
@@ -32,11 +31,12 @@ public:
   bool isDone(void) const;
 
 private:
-  void initializeMenuCmd(void);
+  void showMenu(void);
+  void printPrompt(void);
+  bool readNumber(const __FlashStringHelper *prompt, long &result, long min_val, long max_val);
   void listPrograms(uint16_t page_number, uint16_t pgm_per_page);
 
 private:
-  SerialMenuCmd menu_cmd_;
   RC6502Clock *clock_{nullptr};
   RC6502Kbd *kbd_{nullptr};
   RC6502Sd *sd_{nullptr};

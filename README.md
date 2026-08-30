@@ -179,7 +179,6 @@ Install the following libraries in your Arduino IDE / CLI environment:
 - **[ino-PetitFatFs-raccoon](https://github.com/neoelec/ino-PetitFatFs-raccoon)** (Hardware SPI 8MHz Petit FatFs wrapper)
 - **Adafruit MCP23017 Arduino Library** (`Adafruit_MCP23X17.h`)
 - **RingBuffer** (`RingBuf.h`)
-- **SerialMenuCmd** (`SerialMenuCmd.h`)
 
 ### 2. Building and Uploading
 

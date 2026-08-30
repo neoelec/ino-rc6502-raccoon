@@ -41,11 +41,12 @@ flowchart TD
     subgraph Controller ["Arduino Nano PIO Controller (ino-rc6502-raccoon)"]
         Main["Main Loop (RC6502.ino)"]
         Pio["RC6502Pio (Mode & State Manager)"]
-        Menu["RC6502Menu (Serial CLI)"]
+        Menu["RC6502Menu (Serial CLI Shell)"]
+        Loader["RC6502Loader (Stream Injection Service)"]
         KbdFSM["RC6502Kbd (RingBuf & FSM Engine)"]
         VideoFSM["RC6502Video (Display Capture & TTY)"]
         ClockGen["RC6502Clock (Timer1 1MHz & Reset)"]
-        SdLoader["RC6502Sd & RC6502Pgm (SD Loader)"]
+        Storage["RC6502Sd & RC6502Pgm (PetitFatFs & Catalog)"]
     end
 
     subgraph Expander ["I/O Expander & Storage"]
@@ -66,7 +67,10 @@ flowchart TD
     Pio --> KbdFSM
     Pio --> VideoFSM
     Pio --> ClockGen
-    Menu --> SdLoader
+    Menu --> Loader
+    Loader --> Storage
+    Loader --> KbdFSM
+    Loader --> VideoFSM
 
     KbdFSM -->|Strobe D4 / INT0 D2| PIA
     PIA -->|DA D3 / nRDA D5| VideoFSM
@@ -75,7 +79,7 @@ flowchart TD
 
     KbdFSM <-->|SPI CS: D10| MCP
     VideoFSM <-->|SPI CS: D10| MCP
-    SdLoader <-->|SPI CS: D7| SDCard
+    Storage <-->|SPI CS: D7| SDCard
 
     MCP <--> PIA
     PIA <--> CPU
@@ -94,11 +98,27 @@ stateDiagram-v2
     Idle --> Idle: isBufferEmpty()
     Idle --> Write: !isBufferEmpty()
     Write --> WaitInt: Strobe HIGH
-    WaitInt --> WaitInt: !interrupt_
+    WaitInt --> WaitInt: !interrupt_ (< 100ms)
     WaitInt --> PollClear: interrupt_ / Strobe LOW
-    PollClear --> PollClear: digitalRead(PIN_KBD_CLR) != LOW
-    PollClear --> Idle: digitalRead(PIN_KBD_CLR) == LOW
+    WaitInt --> Timeout: Timeout (> 100ms)
+    PollClear --> PollClear: PIN_KBD_CLR != LOW (< 200ms)
+    PollClear --> Idle: PIN_KBD_CLR == LOW
+    PollClear --> Timeout: Timeout (> 200ms)
+    Timeout --> Idle: Reset Strobe & Clear Flags
 ```
+
+---
+
+## ⚡ Performance & Architectural Highlights
+
+- **Pipelined Stream Injection**: SD file data streams directly through a 64-byte RingBuffer pipeline without blocking per-character empty waits, keeping the 6821 PIA transmission line fully saturated.
+- **128-Byte SD Chunk Buffer**: Enlarged SD sector read buffer reduces Petit FatFs `CMD17` SPI block transactions by 50%.
+- **8MHz Hardware SPI Acceleration**: Uses maximum AVR SPI clock speed (`SPI_CLOCK_DIV2`, 8MHz) with [ino-PetitFatFs-raccoon](https://github.com/neoelec/ino-PetitFatFs-raccoon) for 2x storage throughput.
+- **Fast File Open**: Direct root directory file traversal eliminates redundant filesystem re-mounts with automated fallback recovery.
+- **Non-Blocking Interrupt-Driven Video/Keyboard Handshake**: Fully compliant with the 1MHz MOS 6502 / 6821 PIA timing specifications.
+- **Hardened FSM Safeguards**: 100ms and 200ms timeout guards prevent firmware freeze if the target 6502 CPU halts.
+- **Watchdog Bootloop Protection**: Early `MCUSR` clear and `wdt_disable()` prevents infinite reboot loops on legacy Arduino bootloaders.
+- **Clean Decoupled Architecture**: Scoped enums (`enum class`), single-responsibility `RC6502Loader`, and encapsulated auto-detect `RC6502Pio.begin()`.
 
 ---
 
@@ -156,9 +176,9 @@ stateDiagram-v2
 ### 1. Prerequisites & Required Libraries
 
 Install the following libraries in your Arduino IDE / CLI environment:
+- **[ino-PetitFatFs-raccoon](https://github.com/neoelec/ino-PetitFatFs-raccoon)** (Hardware SPI 8MHz Petit FatFs wrapper)
 - **Adafruit MCP23017 Arduino Library** (`Adafruit_MCP23X17.h`)
 - **RingBuffer** (`RingBuf.h`)
-- **Petit FatFs / PetitFatFs** (`PetitFatFs.h`)
 - **SerialMenuCmd** (`SerialMenuCmd.h`)
 
 ### 2. Building and Uploading

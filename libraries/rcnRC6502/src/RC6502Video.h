@@ -12,6 +12,7 @@ public:
   void begin(Adafruit_MCP23X17 *mcp);
   void reset(void);
   void run(void);
+  void setInterrupt(void);
 
 private:
   void initMcp(void);
@@ -22,6 +23,7 @@ private:
 
 private:
   Adafruit_MCP23X17 *mcp_{nullptr};
+  volatile bool interrupt_{false};
 };
 
 #endif // RCN_RC6502_VIDEO_H

@@ -17,9 +17,8 @@
 - **Hardware-Generated 1MHz System Clock & Reset**:
   - Replaces the external 1MHz crystal oscillator (X14) using Timer1 CTC mode (`OCR1A = 7`, 1MHz square wave on D9).
   - Software-controlled CPU hardware reset pulse generation (D8) with pull-up auto-release.
-- **Interrupt-Driven Keyboard & Video Handshake**:
-  - State Machine (FSM) and external interrupt (`INT0` / `PIN_KBD_CLR`) synchronization for reliable keyboard strobe timing without character drops.
-  - Bidirectional character relaying between PC Serial terminal (115200 bps) and the MCP23S17 SPI I/O Expander.
+- **Dual Interrupt-Driven Keyboard & Video Handshake**:
+  - Full hardware interrupt synchronization (`INT0` on D2 for Keyboard Clear, `INT1` on D3 for Video Data Available) with state machines for reliable timing without character drops.
 - **Micro-SD Program Loader (Petit FatFs)**:
   - Rapid, automated program injection into 6502 memory (Woz Monitor format HEX and BASIC listings).
   - Categorized CSV catalog indexing (`PGMxxx.CSV`) with metadata (Program Name, Type, Load Address, Run Address).
@@ -129,7 +128,7 @@ stateDiagram-v2
 | Pin | Function / Constant | Direction | Connected To | Description |
 | :--- | :--- | :---: | :--- | :--- |
 | **D2** | `PIN_KBD_CLR` | INPUT | 6821 PIA / KBD Ready | `INT0` External interrupt for keyboard handshake |
-| **D3** | `PIN_VIDEO_DA` | INPUT | 6821 PIA / Video DA | Video Data Available strobe |
+| **D3** | `PIN_VIDEO_DA` | INPUT | 6821 PIA / Video DA | `INT1` External interrupt for Video Data Available |
 | **D4** | `PIN_KBD_STR` | OUTPUT | 6821 PIA / KBD Strobe | Keyboard Data Available strobe |
 | **D5** | `PIN_VIDEO_nRDA` | OUTPUT | 6821 PIA / Video nRDA | Video Read Data Acknowledge |
 | **D7** | `PIN_SD_nSS` | OUTPUT | Micro-SD Card Module | SPI Chip Select for SD card |

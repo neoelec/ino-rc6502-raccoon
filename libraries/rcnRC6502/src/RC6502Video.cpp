@@ -16,16 +16,24 @@ void RC6502Video::begin(Adafruit_MCP23X17 *mcp)
 
 void RC6502Video::reset(void)
 {
+  interrupt_ = false;
   initMcp();
   initPin();
+}
+
+void RC6502Video::setInterrupt(void)
+{
+  interrupt_ = true;
 }
 
 void RC6502Video::run(void)
 {
   digitalWrite(PIN_VIDEO_nRDA, HIGH);
 
-  if (digitalRead(PIN_VIDEO_DA) == HIGH)
+  if (interrupt_ || digitalRead(PIN_VIDEO_DA) == HIGH)
   {
+    interrupt_ = false;
+
     if (mcp_)
     {
       int c = mcp_->readGPIOA() & 0x7F;

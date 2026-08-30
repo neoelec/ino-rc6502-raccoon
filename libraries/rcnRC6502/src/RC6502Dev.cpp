@@ -6,13 +6,22 @@
 #include "RC6502Dev.h"
 #include "RC6502Pins.h"
 
-static RC6502Kbd *s_kbd = nullptr; // pointer for interrupt service routine
+static RC6502Kbd *s_kbd = nullptr;     // pointer for interrupt service routine
+static RC6502Video *s_video = nullptr; // pointer for interrupt service routine
 
 static void ISR_RC6502KbdSetInterrupt(void)
 {
   if (s_kbd)
   {
     s_kbd->setInterrupt();
+  }
+}
+
+static void ISR_RC6502VideoSetInterrupt(void)
+{
+  if (s_video)
+  {
+    s_video->setInterrupt();
   }
 }
 
@@ -28,9 +37,9 @@ void RC6502Dev::beginNoSd(void)
   initTty();
   initMcp();
   initKbd();
+  initVideo();
 
   clock_.begin();
-  video_.begin(&mcp_);
 }
 
 RC6502Clock *RC6502Dev::getClock(void)
@@ -66,6 +75,16 @@ void RC6502Dev::initKbd(void)
   // Clear any pending INT0 interrupt flag before attaching
   EIFR = _BV(INTF0);
   attachInterrupt(digitalPinToInterrupt(PIN_KBD_CLR), ISR_RC6502KbdSetInterrupt, CHANGE);
+}
+
+void RC6502Dev::initVideo(void)
+{
+  video_.begin(&mcp_);
+  s_video = &video_;
+
+  // Clear any pending INT1 interrupt flag before attaching
+  EIFR = _BV(INTF1);
+  attachInterrupt(digitalPinToInterrupt(PIN_VIDEO_DA), ISR_RC6502VideoSetInterrupt, RISING);
 }
 
 void RC6502Dev::initMcp(void)

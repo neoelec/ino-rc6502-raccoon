@@ -24,6 +24,7 @@ public:
 
 private:
   void initKbd(void);
+  void initVideo(void);
   void initMcp(void);
   void initPin(void);
   void initSd(void);

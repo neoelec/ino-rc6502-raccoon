@@ -10,6 +10,7 @@ void RC6502Kbd::begin(Adafruit_MCP23X17 *mcp)
   mcp_ = mcp;
   interrupt_ = false;
   state_ = State::Idle;
+  strobe_start_ms_ = 0;
   serial_buf_.clear();
 
   reset();
@@ -20,6 +21,7 @@ void RC6502Kbd::reset(void)
   initMcp();
   initPin();
   interrupt_ = false;
+  strobe_start_ms_ = 0;
   state_ = State::Idle;
 }
 
@@ -63,7 +65,7 @@ void RC6502Kbd::pushToBuffer(int c)
   serial_buf_.push(static_cast<uint8_t>(c));
 }
 
-bool RC6502Kbd::isBufferFull(void) const
+bool RC6502Kbd::isBufferFull(void)
 {
   return serial_buf_.isFull();
 }
@@ -75,7 +77,7 @@ int RC6502Kbd::popFromBuffer(void)
   return static_cast<int>(c);
 }
 
-bool RC6502Kbd::isBufferEmpty(void) const
+bool RC6502Kbd::isBufferEmpty(void)
 {
   return serial_buf_.isEmpty();
 }
@@ -111,6 +113,7 @@ void RC6502Kbd::handleIdle(void)
   }
 
   state_ = State::Write;
+  handleWrite();
 }
 
 void RC6502Kbd::handleWrite(void)
@@ -125,6 +128,7 @@ void RC6502Kbd::handleWrite(void)
 
   interrupt_ = false; // Reset handshake flag immediately before strobe assertion
   digitalWrite(PIN_KBD_STR, HIGH);
+  strobe_start_ms_ = millis();
 
   state_ = State::WaitInt;
 }
@@ -133,6 +137,13 @@ void RC6502Kbd::handleWaitInt(void)
 {
   if (!interrupt_)
   {
+    // Timeout safeguard: if target 6502 CPU does not acknowledge within 100ms
+    if (millis() - strobe_start_ms_ > 100)
+    {
+      digitalWrite(PIN_KBD_STR, LOW);
+      interrupt_ = false;
+      state_ = State::Idle;
+    }
     return;
   }
 
@@ -140,12 +151,18 @@ void RC6502Kbd::handleWaitInt(void)
 
   interrupt_ = false;
   state_ = State::PollClear;
+  handlePollClear();
 }
 
 void RC6502Kbd::handlePollClear(void)
 {
   if (digitalRead(PIN_KBD_CLR) != LOW)
   {
+    // Timeout safeguard: if KBD_CLR does not return LOW within 200ms
+    if (millis() - strobe_start_ms_ > 200)
+    {
+      state_ = State::Idle;
+    }
     return;
   }
 

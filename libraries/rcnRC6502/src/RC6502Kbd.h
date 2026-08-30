@@ -24,8 +24,8 @@ public:
 
   void begin(Adafruit_MCP23X17 *mcp);
   void reset(void);
-  bool isBufferEmpty(void) const;
-  bool isBufferFull(void) const;
+  bool isBufferEmpty(void);
+  bool isBufferFull(void);
   int popFromBuffer(void);
   void pushToBuffer(int ch);
   void run(void);
@@ -45,6 +45,7 @@ private:
   RingBuf<uint8_t, 64> serial_buf_;
   volatile bool interrupt_{false};
   State state_{State::Idle};
+  uint32_t strobe_start_ms_{0};
 };
 
 #endif // RCN_RC6502_KBD_H

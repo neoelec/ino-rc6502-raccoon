@@ -19,8 +19,9 @@
   - Software-controlled CPU hardware reset pulse generation (D8) with pull-up auto-release.
 - **Dual Interrupt-Driven Keyboard & Video Handshake**:
   - Full hardware interrupt synchronization (`INT0` on D2 for Keyboard Clear, `INT1` on D3 for Video Data Available) with state machines for reliable timing without character drops.
-- **Micro-SD Program Loader (Petit FatFs)**:
-  - Rapid, automated program injection into 6502 memory (Woz Monitor format HEX and BASIC listings).
+- **Multi-Format Micro-SD Program Loader (Petit FatFs)**:
+  - Rapid, automated program injection into 6502 memory for Woz Monitor format HEX and BASIC listings.
+  - **On-The-Fly Binary Conversion (`Type::Bin`)**: Directly streams raw 6502 machine code binaries (`.bin`) from SD card into Woz Monitor format (`<ADDR>: XX XX ...\r`), saving up to 73% SD card storage.
   - Categorized CSV catalog indexing (`PGMxxx.CSV`) with metadata (Program Name, Type, Load Address, Run Address).
 - **Interactive Serial Console Menu (`Ctrl+R`)**:
   - Built-in command shell for directory switching, paginated program listing, one-key program loading, warm resetting, and PIO watchdog reset.
@@ -110,6 +111,7 @@ stateDiagram-v2
 
 ## ⚡ Performance & Architectural Highlights
 
+- **Multi-Format Polymorphic Loader**: Dynamically supports direct ASCII streaming (`Type::Hex`) and on-the-fly binary formatting (`Type::Bin`) with zero memory allocation.
 - **Pipelined Stream Injection**: SD file data streams directly through a 64-byte RingBuffer pipeline without blocking per-character empty waits, keeping the 6821 PIA transmission line fully saturated.
 - **128-Byte SD Chunk Buffer**: Enlarged SD sector read buffer reduces Petit FatFs `CMD17` SPI block transactions by 50%.
 - **8MHz Hardware SPI Acceleration**: Uses maximum AVR SPI clock speed (`SPI_CLOCK_DIV2`, 8MHz) with [ino-PetitFatFs-raccoon](https://github.com/neoelec/ino-PetitFatFs-raccoon) for 2x storage throughput.

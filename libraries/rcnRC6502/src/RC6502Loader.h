@@ -18,8 +18,12 @@ public:
 
 private:
   bool openFile(RC6502Sd *sd, const char *file_name);
-  bool streamFile(RC6502Sd *sd, RC6502Kbd *kbd, RC6502Video *video, const char *file_name);
+  bool streamTextFile(RC6502Sd *sd, RC6502Kbd *kbd, RC6502Video *video, const char *file_name);
+  bool streamBinaryFile(RC6502Sd *sd, RC6502Kbd *kbd, RC6502Video *video, const char *file_name, uint16_t start_address);
   void feedOneCharacter(RC6502Kbd *kbd, int c);
+  void feedHexByte(RC6502Kbd *kbd, RC6502Video *video, uint8_t val);
+  void feedHexAddress(RC6502Kbd *kbd, RC6502Video *video, uint16_t addr);
+  void feedCharPipelined(RC6502Kbd *kbd, RC6502Video *video, char c);
   void busyWaitConsole(RC6502Kbd *kbd, RC6502Video *video);
 };
 

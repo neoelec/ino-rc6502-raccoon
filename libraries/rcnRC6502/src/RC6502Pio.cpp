@@ -148,4 +148,9 @@ void RC6502PioClass::handleStateMenuRun(void)
     RC6502Utils::flushTtyRx();
     state_ = State::Keyboard;
   }
+
+  if (video_)
+  {
+    video_->run();
+  }
 }

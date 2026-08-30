@@ -31,6 +31,9 @@ void RC6502MenuClass::enter(void)
 
   done_ = false;
   dir_number_ = 0;
+  state_ = State::Command;
+  input_len_ = 0;
+  input_buf_[0] = '\0';
 
   showMenu();
   printPrompt();
@@ -48,27 +51,47 @@ bool RC6502MenuClass::run(void)
     return true;
   }
 
-  char c = static_cast<char>(tolower(Serial.read()));
+  char c = static_cast<char>(Serial.read());
 
-  // Handle Enter (CR or LF)
-  if (c == '\r' || c == '\n')
+  if (state_ == State::Command)
   {
-    printPrompt();
-    return true;
+    handleCommand(c);
+  }
+  else
+  {
+    handleInputPrompt(c);
   }
 
-  Serial.println(c);
+  return true;
+}
 
-  switch (c)
+void RC6502MenuClass::handleCommand(char c)
+{
+  char cmd = static_cast<char>(tolower(c));
+
+  // Handle Enter (CR or LF)
+  if (cmd == '\r' || cmd == '\n')
+  {
+    if (Serial.available() > 0 && (Serial.peek() == '\n' || Serial.peek() == '\r'))
+    {
+      Serial.read();
+    }
+    printPrompt();
+    return;
+  }
+
+  Serial.println(cmd);
+
+  switch (cmd)
   {
   case 's':
-    doCmdSelectDirectory();
+    startPrompt(State::PromptDirNumber, F("DIRECTORY NUMBER [0 <= dir <= 99]"));
     break;
   case 'l':
-    doCmdListPrograms();
+    startPrompt(State::PromptPageNumber, F("PAGE NUMBER [>=0]"));
     break;
   case 'o':
-    doCmdLoadProgram();
+    startPrompt(State::PromptPgmNumber, F("PROGRAM NUMBER [0 <= pgm <= 999]"));
     break;
   case 'x':
     doCmdExit();
@@ -87,8 +110,140 @@ bool RC6502MenuClass::run(void)
     printPrompt();
     break;
   }
+}
 
-  return true;
+void RC6502MenuClass::startPrompt(State next_state, const __FlashStringHelper *prompt_msg)
+{
+  state_ = next_state;
+  input_len_ = 0;
+  input_buf_[0] = '\0';
+
+  Serial.println();
+  Serial.print(F("RCN: "));
+  Serial.print(prompt_msg);
+  printPrompt();
+}
+
+void RC6502MenuClass::handleInputPrompt(char c)
+{
+  if (c == 0x1B) // Escape key
+  {
+    Serial.println();
+    state_ = State::Command;
+    input_len_ = 0;
+    input_buf_[0] = '\0';
+    printPrompt();
+    return;
+  }
+
+  if (c == '\b' || c == 0x7F) // Backspace / Delete
+  {
+    if (input_len_ > 0)
+    {
+      input_len_--;
+      input_buf_[input_len_] = '\0';
+      Serial.print(F("\b \b"));
+    }
+    return;
+  }
+
+  if (c == '\r' || c == '\n')
+  {
+    if (Serial.available() > 0 && (Serial.peek() == '\n' || Serial.peek() == '\r'))
+    {
+      Serial.read();
+    }
+
+    if (input_len_ == 0)
+    {
+      state_ = State::Command;
+      printPrompt();
+      return;
+    }
+
+    input_buf_[input_len_] = '\0';
+    processPromptSubmit();
+    return;
+  }
+
+  if (isdigit(static_cast<unsigned char>(c)) && input_len_ < sizeof(input_buf_) - 1)
+  {
+    input_buf_[input_len_++] = c;
+    input_buf_[input_len_] = '\0';
+    Serial.write(c);
+  }
+}
+
+void RC6502MenuClass::processPromptSubmit(void)
+{
+  long val = atol(input_buf_);
+  State current_state = state_;
+  state_ = State::Command;
+  input_len_ = 0;
+  input_buf_[0] = '\0';
+
+  switch (current_state)
+  {
+  case State::PromptDirNumber:
+    if (val < 0 || val > MAX_DIR_NUMBER)
+    {
+      printWrongValue(val, 0, MAX_DIR_NUMBER);
+      return;
+    }
+    dir_number_ = static_cast<uint8_t>(val);
+    Serial.println();
+    Serial.print(F("RCN: DIRECTORY - "));
+    Serial.println(dir_number_, DEC);
+    Serial.println();
+    printPrompt();
+    break;
+
+  case State::PromptPageNumber:
+    if (val < 0 || val > 9999)
+    {
+      printWrongValue(val, 0, 9999);
+      return;
+    }
+    listPrograms(static_cast<uint16_t>(val), DEFAULT_PGM_PER_PAGE);
+    printPrompt();
+    break;
+
+  case State::PromptPgmNumber:
+    if (val < 0 || val > MAX_PGM_NUMBER)
+    {
+      printWrongValue(val, 0, MAX_PGM_NUMBER);
+      return;
+    }
+    if (!pgm_.begin(sd_, dir_number_, static_cast<uint16_t>(val)))
+    {
+      Serial.println();
+      Serial.println(F("RCN: Failed to find program!"));
+      printPrompt();
+      return;
+    }
+    {
+      RC6502Loader loader;
+      loader.load(sd_, kbd_, video_, pgm_);
+    }
+    printPrompt();
+    break;
+
+  default:
+    printPrompt();
+    break;
+  }
+}
+
+void RC6502MenuClass::printWrongValue(long val, long min_val, long max_val)
+{
+  Serial.println();
+  Serial.print(F("Wrong Value "));
+  Serial.print(val, DEC);
+  Serial.print(F(". It should be "));
+  Serial.print(min_val, DEC);
+  Serial.print(F(" <= value <= "));
+  Serial.println(max_val, DEC);
+  printPrompt();
 }
 
 void RC6502MenuClass::showMenu(void)
@@ -110,85 +265,6 @@ void RC6502MenuClass::printPrompt(void)
   Serial.print(F("->"));
 }
 
-bool RC6502MenuClass::readNumber(const __FlashStringHelper *prompt, long &result, long min_val, long max_val)
-{
-  Serial.println();
-  Serial.print(F("RCN: "));
-  Serial.print(prompt);
-  printPrompt();
-
-  char buf[8]{0};
-  uint8_t len = 0;
-
-  while (true)
-  {
-    if (Serial.available() <= 0)
-    {
-      continue;
-    }
-
-    char c = static_cast<char>(Serial.read());
-
-    if (c == '\r' || c == '\n')
-    {
-      if (len == 0)
-      {
-        printPrompt();
-        return false;
-      }
-      buf[len] = '\0';
-      break;
-    }
-
-    if (c == 0x1B) // Escape key
-    {
-      Serial.println();
-      printPrompt();
-      return false;
-    }
-
-    if (c == '\b' || c == 0x7F) // Backspace / Delete
-    {
-      if (len > 0)
-      {
-        len--;
-        Serial.print(F("\b \b"));
-      }
-      continue;
-    }
-
-    if (isdigit(static_cast<unsigned char>(c)) && len < sizeof(buf) - 1)
-    {
-      buf[len++] = c;
-      Serial.write(c);
-    }
-  }
-
-  // Drain trailing line feeds if CRLF
-  delay(2);
-  if (Serial.available() > 0 && (Serial.peek() == '\n' || Serial.peek() == '\r'))
-  {
-    Serial.read();
-  }
-
-  long val = atol(buf);
-  if (val < min_val || val > max_val)
-  {
-    Serial.println();
-    Serial.print(F("Wrong Value "));
-    Serial.print(val, DEC);
-    Serial.print(F(". It should be "));
-    Serial.print(min_val, DEC);
-    Serial.print(F(" <= value <= "));
-    Serial.println(max_val, DEC);
-    printPrompt();
-    return false;
-  }
-
-  result = val;
-  return true;
-}
-
 void RC6502MenuClass::doCmdHelp(void)
 {
   showMenu();
@@ -202,56 +278,6 @@ void RC6502MenuClass::doCmdExit(void)
   Serial.println();
 
   done_ = true;
-}
-
-void RC6502MenuClass::doCmdListPrograms(void)
-{
-  long page_number = 0;
-  if (!readNumber(F("PAGE NUMBER [>=0]"), page_number, 0, 9999))
-  {
-    return;
-  }
-
-  listPrograms(static_cast<uint16_t>(page_number), DEFAULT_PGM_PER_PAGE);
-  printPrompt();
-}
-
-void RC6502MenuClass::doCmdLoadProgram(void)
-{
-  long pgm_number = 0;
-  if (!readNumber(F("PROGRAM NUMBER [0 <= pgm <= 999]"), pgm_number, 0, MAX_PGM_NUMBER))
-  {
-    return;
-  }
-
-  if (!pgm_.begin(sd_, dir_number_, static_cast<uint16_t>(pgm_number)))
-  {
-    Serial.println();
-    Serial.println(F("RCN: Failed to find program!"));
-    printPrompt();
-    return;
-  }
-
-  RC6502Loader loader;
-  loader.load(sd_, kbd_, video_, pgm_);
-  printPrompt();
-}
-
-void RC6502MenuClass::doCmdSelectDirectory(void)
-{
-  long dir_number = 0;
-  if (!readNumber(F("DIRECTORY NUMBER [0 <= dir <= 99]"), dir_number, 0, MAX_DIR_NUMBER))
-  {
-    return;
-  }
-
-  dir_number_ = static_cast<uint8_t>(dir_number);
-  Serial.println();
-  Serial.print(F("RCN: DIRECTORY - "));
-  Serial.println(dir_number_, DEC);
-  Serial.println();
-
-  printPrompt();
 }
 
 void RC6502MenuClass::doCmdPIOReset(void)

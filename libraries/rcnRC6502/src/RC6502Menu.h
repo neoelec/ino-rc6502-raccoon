@@ -18,22 +18,31 @@
 class RC6502MenuClass
 {
 public:
+  enum class State : uint8_t
+  {
+    Command,
+    PromptDirNumber,
+    PromptPageNumber,
+    PromptPgmNumber
+  };
+
   void begin(RC6502Dev &dev);
   void enter(void);
   bool run(void);
   void doCmdHelp(void);
   void doCmdExit(void);
-  void doCmdListPrograms(void);
-  void doCmdLoadProgram(void);
   void doCmdPIOReset(void);
-  void doCmdSelectDirectory(void);
   void doCmdWarmReset(void);
   bool isDone(void) const;
 
 private:
   void showMenu(void);
   void printPrompt(void);
-  bool readNumber(const __FlashStringHelper *prompt, long &result, long min_val, long max_val);
+  void handleCommand(char c);
+  void handleInputPrompt(char c);
+  void processPromptSubmit(void);
+  void printWrongValue(long val, long min_val, long max_val);
+  void startPrompt(State next_state, const __FlashStringHelper *prompt_msg);
   void listPrograms(uint16_t page_number, uint16_t pgm_per_page);
 
 private:
@@ -43,6 +52,10 @@ private:
   RC6502Video *video_{nullptr};
 
   bool done_{true};
+  State state_{State::Command};
+  char input_buf_[8]{0};
+  uint8_t input_len_{0};
+
   RC6502Pgm pgm_;
   uint8_t dir_number_{0};
 };

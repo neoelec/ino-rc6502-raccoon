@@ -57,7 +57,7 @@ void RC6502Sd::waitKey(void)
 {
   RC6502Utils::flushTtyRx();
 
-  Serial.println(F("RCN: Check SD and press a key to repeat"));
+  Serial.println(F("Check SD and press a key to repeat"));
   Serial.println();
 
   waitTtyRx();
@@ -66,7 +66,7 @@ void RC6502Sd::waitKey(void)
 
 void RC6502Sd::printErrorCode(FRESULT error)
 {
-  Serial.print(F("RCN: SD error "));
+  Serial.print(F("SD error "));
   Serial.print(static_cast<unsigned int>(error));
   Serial.print(F(" ("));
   switch (error)

@@ -4,12 +4,14 @@
 #include <Arduino.h>
 
 #include "RC6502Loader.h"
-#include "RC6502Utils.h"
 
-static inline char toHexNibble(uint8_t nibble)
+// Static 128-byte chunk buffer to eliminate runtime stack overhead
+static uint8_t s_sd_chunk_buf[128];
+
+static inline char toHexNibble(uint8_t val)
 {
-  nibble &= 0x0F;
-  return (nibble < 10) ? static_cast<char>('0' + nibble) : static_cast<char>('A' + (nibble - 10));
+  val &= 0x0F;
+  return (val < 10) ? ('0' + val) : ('A' + val - 10);
 }
 
 bool RC6502Loader::load(RC6502Sd *sd, RC6502Kbd *kbd, RC6502Video *video, const RC6502Pgm &pgm)
@@ -24,14 +26,14 @@ bool RC6502Loader::load(RC6502Sd *sd, RC6502Kbd *kbd, RC6502Video *video, const 
   if (!openFile(sd, file_name))
   {
     Serial.println();
-    Serial.println(F("RCN: Could not open program file. Load aborted!"));
+    Serial.println(F("Could not open file. Load aborted!"));
     return false;
   }
 
   Serial.println();
-  Serial.print(F("RCN: Loading program ("));
+  Serial.print(F("LOADING: "));
   Serial.print(file_name);
-  Serial.println(F(")..."));
+  Serial.println(F(" ..."));
 
   bool success = false;
   if (pgm.getType() == RC6502Pgm::Type::Bin)
@@ -46,7 +48,7 @@ bool RC6502Loader::load(RC6502Sd *sd, RC6502Kbd *kbd, RC6502Video *video, const 
   if (!success)
   {
     Serial.println();
-    Serial.println(F("RCN: Load aborted due to error!"));
+    Serial.println(F("Load aborted due to error!"));
     return false;
   }
 
@@ -62,14 +64,20 @@ bool RC6502Loader::load(RC6502Sd *sd, RC6502Kbd *kbd, RC6502Video *video, const 
 
 bool RC6502Loader::openFile(RC6502Sd *sd, const char *file_name)
 {
-  uint8_t error = sd->open(file_name);
-  if (error != FR_OK)
+  if (!sd || !file_name || *file_name == '\0')
   {
-    // Re-mount once and retry opening in case filesystem state was invalidated
-    sd->mount();
-    error = sd->open(file_name);
+    return false;
   }
 
+  uint8_t error = sd->open(file_name);
+  if (error == FR_OK)
+  {
+    return true;
+  }
+
+  // Auto-retry once with mount in case SD state was desynchronized
+  sd->mount();
+  error = sd->open(file_name);
   if (error != FR_OK)
   {
     sd->printError(error, RC6502Sd::Operation::Open, file_name);
@@ -79,13 +87,12 @@ bool RC6502Loader::openFile(RC6502Sd *sd, const char *file_name)
   return true;
 }
 
-static uint8_t s_sd_chunk_buf[128];
-
 bool RC6502Loader::streamTextFile(RC6502Sd *sd, RC6502Kbd *kbd, RC6502Video *video, const char *file_name)
 {
   bool empty_file = true;
   uint8_t error = FR_OK;
   uint8_t sz_read = 0;
+  char prev_char = 0;
 
   do
   {
@@ -103,14 +110,24 @@ bool RC6502Loader::streamTextFile(RC6502Sd *sd, RC6502Kbd *kbd, RC6502Video *vid
 
     for (uint8_t i = 0; i < sz_read; i++)
     {
-      feedCharPipelined(kbd, video, static_cast<char>(s_sd_chunk_buf[i]));
+      char c = static_cast<char>(s_sd_chunk_buf[i]);
+
+      // Normalize CRLF: filter redundant '\n' if immediately following '\r'
+      if (c == '\n' && prev_char == '\r')
+      {
+        prev_char = c;
+        continue;
+      }
+      prev_char = c;
+
+      feedCharPipelined(kbd, video, c);
     }
   } while (sz_read == sizeof(s_sd_chunk_buf));
 
   if (empty_file)
   {
     Serial.println();
-    Serial.println(F("RCN: Empty file - Load aborted!"));
+    Serial.println(F("Empty file - Load aborted!"));
     return false;
   }
 
@@ -177,7 +194,7 @@ bool RC6502Loader::streamBinaryFile(RC6502Sd *sd, RC6502Kbd *kbd, RC6502Video *v
   if (empty_file)
   {
     Serial.println();
-    Serial.println(F("RCN: Empty file - Load aborted!"));
+    Serial.println(F("Empty file - Load aborted!"));
     return false;
   }
 
@@ -275,4 +292,32 @@ void RC6502Loader::drainVideo(RC6502Kbd *kbd, RC6502Video *video, uint32_t quiet
       last_activity_ms = millis();
     }
   }
+}
+
+void RC6502Loader::displayMemory(RC6502Kbd *kbd, RC6502Video *video, const char *range_str)
+{
+  if (!kbd || !video || !range_str || *range_str == '\0')
+  {
+    return;
+  }
+
+  Serial.println();
+  Serial.print(F("Memory Display ("));
+  Serial.print(range_str);
+  Serial.println(F("):"));
+
+  // Send CR first to ensure Woz Monitor is ready at prompt
+  feedCharPipelined(kbd, video, '\r');
+  busyWaitConsole(kbd, video);
+
+  // Send memory range query
+  for (const char *p = range_str; *p; p++)
+  {
+    feedCharPipelined(kbd, video, *p);
+  }
+  feedCharPipelined(kbd, video, '\r');
+
+  // Actively drain video stream to print memory dump
+  drainVideo(kbd, video, 300, 8000);
+  Serial.println();
 }

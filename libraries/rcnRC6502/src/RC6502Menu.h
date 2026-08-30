@@ -10,6 +10,7 @@
 
 #include "RC6502Dev.h"
 #include "RC6502Kbd.h"
+#include "RC6502Loader.h"
 #include "RC6502Pgm.h"
 #include "RC6502Sd.h"
 #include "RC6502Video.h"
@@ -31,11 +32,6 @@ public:
   bool isDone(void) const;
 
 private:
-  void busyWaitConsole(void);
-  void feedOneCharacter(int c);
-  void loadPgmFile(void);
-  bool executeLoadPgmFile(void);
-  bool openPgmFile(void);
   void initializeMenuCmd(void);
   void listPrograms(uint16_t page_number, uint16_t pgm_per_page);
 

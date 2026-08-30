@@ -133,7 +133,8 @@ void RC6502MenuClass::doCmdLoadProgram(void)
     return;
   }
 
-  loadPgmFile();
+  RC6502Loader loader;
+  loader.load(sd_, kbd_, video_, pgm_);
   menu_cmd_.giveCmdPrompt();
 }
 
@@ -205,143 +206,6 @@ void RC6502MenuClass::doCmdWarmReset(void)
 bool RC6502MenuClass::isDone(void) const
 {
   return done_;
-}
-
-void RC6502MenuClass::feedOneCharacter(int c)
-{
-  if (!kbd_)
-  {
-    return;
-  }
-
-  c = (c == '\n') ? '\r' : c;
-  kbd_->pushToBuffer(c);
-}
-
-void RC6502MenuClass::busyWaitConsole(void)
-{
-  if (!kbd_ || !video_)
-  {
-    return;
-  }
-
-  while (!kbd_->isBufferEmpty())
-  {
-    kbd_->run();
-    video_->run();
-  }
-}
-
-void RC6502MenuClass::loadPgmFile(void)
-{
-  if (!openPgmFile())
-  {
-    Serial.println();
-    Serial.println(F("RCN: Could not open program file. Load aborted!"));
-    return;
-  }
-
-  Serial.println();
-  Serial.print(F("RCN: Loading program ("));
-  Serial.print(pgm_.getPgmFile());
-  Serial.println(F(")..."));
-
-  if (!executeLoadPgmFile())
-  {
-    Serial.println();
-    Serial.println(F("RCN: Load aborted due to error!"));
-    return;
-  }
-
-  Serial.println();
-  pgm_.printProgram();
-  Serial.println();
-}
-
-bool RC6502MenuClass::executeLoadPgmFile(void)
-{
-  if (!sd_ || !kbd_ || !video_)
-  {
-    return false;
-  }
-
-  const char *pgm_file = pgm_.getPgmFile();
-  bool empty_file = true;
-  uint8_t buffer[128];
-  uint8_t error = FR_OK;
-  uint8_t sz_read = 0;
-
-  do
-  {
-    error = sd_->read(buffer, sizeof(buffer), sz_read);
-    if (sz_read > 0)
-    {
-      empty_file = false;
-    }
-
-    if (error != FR_OK)
-    {
-      sd_->printError(error, RC6502Sd::Operation::Read, pgm_file);
-      return false;
-    }
-
-    for (uint8_t i = 0; i < sz_read; i++)
-    {
-      // If the keyboard buffer is full, process FSM until space is available
-      while (kbd_->isBufferFull())
-      {
-        kbd_->run();
-        video_->run();
-      }
-
-      feedOneCharacter(buffer[i]);
-
-      // Step the FSM forward immediately to keep transmission pipeline saturated
-      kbd_->run();
-      video_->run();
-    }
-  } while (sz_read == sizeof(buffer));
-
-  if (empty_file)
-  {
-    Serial.println();
-    Serial.println(F("RCN: Empty file - Load aborted!"));
-    return false;
-  }
-
-  // Drain all remaining queued characters
-  busyWaitConsole();
-
-  // Send final carriage return and drain
-  feedOneCharacter('\r');
-  busyWaitConsole();
-
-  return true;
-}
-
-bool RC6502MenuClass::openPgmFile(void)
-{
-  if (!sd_)
-  {
-    return false;
-  }
-
-  const char *pgm_file = pgm_.getPgmFile();
-  uint8_t error = sd_->open(pgm_file);
-  if (error != FR_OK)
-  {
-    // Re-mount once and retry opening in case filesystem state was invalidated
-    sd_->mount();
-    error = sd_->open(pgm_file);
-  }
-
-  if (error != FR_OK)
-  {
-    sd_->printError(error, RC6502Sd::Operation::Open, pgm_file);
-    return false;
-  }
-
-  return true;
 }
 
 void RC6502MenuClass::initializeMenuCmd(void)

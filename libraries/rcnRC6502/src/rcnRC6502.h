@@ -13,6 +13,7 @@
 #include "RC6502Clock.h"
 #include "RC6502Dev.h"
 #include "RC6502Kbd.h"
+#include "RC6502Loader.h"
 #include "RC6502Menu.h"
 #include "RC6502Pio.h"
 #include "RC6502Pgm.h"

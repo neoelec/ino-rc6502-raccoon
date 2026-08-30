@@ -64,9 +64,17 @@ RC6502Pgm::Type RC6502Pgm::getType(void) const
   return type_;
 }
 
-const char *RC6502Pgm::getTypeT(void) const
+const __FlashStringHelper *RC6502Pgm::getTypeT(void) const
 {
-  return type_t_;
+  switch (type_)
+  {
+  case Type::Hex:
+    return F("HEX");
+  case Type::Bin:
+    return F("BIN");
+  default:
+    return F("???");
+  }
 }
 
 const char *RC6502Pgm::getPgmFile(void) const
@@ -91,7 +99,7 @@ void RC6502Pgm::printProgram(void) const
   Serial.print(F("RCN: "));
   Serial.print(description_);
   Serial.print(F(" ("));
-  Serial.print(type_t_);
+  Serial.print(getTypeT());
   Serial.println(F(")"));
 
   Serial.print(F("     F> "));
@@ -194,13 +202,11 @@ void RC6502Pgm::parseToken(char *token, uint8_t i)
     description_[sizeof(description_) - 1] = '\0';
     break;
   case 1: // type_
-    strncpy(type_t_, token, sizeof(type_t_) - 1);
-    type_t_[sizeof(type_t_) - 1] = '\0';
-    if (!strcmp(token, "HEX"))
+    if (!strcmp_P(token, PSTR("HEX")))
     {
       type_ = Type::Hex;
     }
-    else if (!strcmp(token, "BIN"))
+    else if (!strcmp_P(token, PSTR("BIN")))
     {
       type_ = Type::Bin;
     }
@@ -244,7 +250,6 @@ bool RC6502Pgm::beginCsvName(const char *csv_name)
 
   description_[0] = '\0';
   type_ = Type::Unknown;
-  type_t_[0] = '\0';
   pgm_file_[0] = '\0';
   load_address_ = 0;
   run_address_ = 0;

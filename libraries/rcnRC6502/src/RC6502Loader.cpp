@@ -216,9 +216,12 @@ void RC6502Loader::feedCharPipelined(RC6502Kbd *kbd, RC6502Video *video, char c)
 
   feedOneCharacter(kbd, c);
 
-  // Step the FSM forward immediately to keep transmission pipeline saturated
-  kbd->run();
-  video->run();
+  // Step the FSM forward when buffer is getting full or on newline to keep pipeline flowing
+  if (kbd->isBufferFull() || c == '\r')
+  {
+    kbd->run();
+    video->run();
+  }
 }
 
 void RC6502Loader::feedOneCharacter(RC6502Kbd *kbd, int c)

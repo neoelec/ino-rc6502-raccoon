@@ -25,7 +25,7 @@ public:
 
   const char *getDescription(void) const;
   Type getType(void) const;
-  const char *getTypeT(void) const;
+  const __FlashStringHelper *getTypeT(void) const;
   const char *getPgmFile(void) const;
   uint16_t getLoadAddress(void) const;
   uint16_t getRunAddress(void) const;
@@ -45,7 +45,6 @@ private:
 
   char description_[24]{0};
   Type type_{Type::Unknown};
-  char type_t_[8]{0};
   char pgm_file_[16]{0};
   uint16_t load_address_{0};
   uint16_t run_address_{0};

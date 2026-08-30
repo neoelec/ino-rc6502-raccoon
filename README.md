@@ -5,7 +5,7 @@
 [![Compatibility: RC6502](https://img.shields.io/badge/Hardware-RC6502%20Apple%201%20Replica-orange.svg)](https://github.com/neoelec/ino-rc6502-raccoon)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE.txt)
 
-**`ino-rc6502-raccoon`** is an advanced, high-performance Parallel I/O (PIO) controller firmware and peripheral expansion suite for the **RC6502 Apple 1 Replica** computer. Running on an **Arduino Nano (ATmega328P)**, it transforms serial communication into hardware-synchronized Apple 1 keyboard/video signals, generates an on-board 1MHz system clock, controls CPU reset lines, and provides a Micro-SD card program loader with an interactive serial menu.
+**`ino-rc6502-raccoon`** is an advanced, high-performance Parallel I/O (PIO) controller firmware and peripheral expansion suite for the **RC6502 Apple 1 Replica** computer. Running on an **Arduino Nano (ATmega328P)**, it transforms serial communication into hardware-synchronized Apple 1 keyboard/video signals, generates an on-board 1MHz system clock, controls CPU reset lines, and provides a CFFA-1 style Micro-SD card program loader with an interactive serial console menu.
 
 ---
 
@@ -13,7 +13,7 @@
 
 - **Dual Operational Modes**:
   - **Classic Mode**: Standard PIO terminal relay without hardware modifications.
-  - **Modded Mode**: Full-featured mode with Micro-SD card storage, on-board 1MHz clock generator, hardware reset control, and interactive menu.
+  - **Modded Mode**: Full-featured mode with Micro-SD card storage, on-board 1MHz clock generator, hardware reset control, and interactive CFFA-1 menu.
 - **Hardware-Generated 1MHz System Clock & Reset**:
   - Replaces the external 1MHz crystal oscillator (X14) using Timer1 CTC mode (`OCR1A = 7`, 1MHz square wave on D9).
   - Software-controlled CPU hardware reset pulse generation (D8) with pull-up auto-release.
@@ -22,9 +22,9 @@
 - **Multi-Format Micro-SD Program Loader (Petit FatFs)**:
   - Rapid, automated program injection into 6502 memory for Woz Monitor format HEX and BASIC listings.
   - **On-The-Fly Binary Conversion (`Type::Bin`)**: Directly streams raw 6502 machine code binaries (`.bin`) from SD card into Woz Monitor format (`<ADDR>: XX XX ...\r`), saving up to 73% SD card storage.
-  - Categorized CSV catalog indexing (`PGMxxx.CSV`) with metadata (Program Name, Type, Load Address, Run Address).
-- **Interactive Serial Console Menu (`Ctrl+R`)**:
-  - Built-in command shell for directory switching, paginated program listing, one-key program loading, warm resetting, and PIO watchdog reset.
+  - Consolidated directory catalog tables (`CATALOG.CSV`) and master volume prefix indexing (`PREFIX.CSV`).
+- **Interactive CFFA-1 Console Menu (`Ctrl+R`)**:
+  - Compact, authentic CFFA-1 storage shell for prefix navigation, full catalog listing, fast program loading (by name or number), live 6502 memory inspection (`M`), terse display toggling (`T`), warm resetting (`R`), and PIO watchdog reset (`W`).
 - **Multi-Bank Custom ROM Integration**:
   - Full support for bank-switched ROMs containing Integer BASIC, Krusader Assembler, Apple-II Monitor, Ohio Scientific BASIC, AppleSoft BASIC Lite, and Woz Monitor.
 
@@ -41,7 +41,7 @@ flowchart TD
     subgraph Controller ["Arduino Nano PIO Controller (ino-rc6502-raccoon)"]
         Main["Main Loop (RC6502.ino)"]
         Pio["RC6502Pio (Mode & State Manager)"]
-        Menu["RC6502Menu (Serial CLI Shell)"]
+        Menu["RC6502Menu (CFFA-1 Console Shell)"]
         Loader["RC6502Loader (Stream Injection Service)"]
         KbdFSM["RC6502Kbd (RingBuf & FSM Engine)"]
         VideoFSM["RC6502Video (Display Capture & TTY)"]
@@ -87,7 +87,6 @@ flowchart TD
     CPU <--> RAM
 ```
 
-
 ### Keyboard Strobe & Handshake FSM
 
 ```mermaid
@@ -111,8 +110,8 @@ stateDiagram-v2
 
 ## ⚡ Performance & Architectural Highlights
 
-- **Multi-Format Polymorphic Loader**: Dynamically supports direct ASCII streaming (`Type::Hex`) and on-the-fly binary formatting (`Type::Bin`) with zero memory allocation.
-- **Pipelined Stream Injection**: SD file data streams directly through a 64-byte RingBuffer pipeline without blocking per-character empty waits, keeping the 6821 PIA transmission line fully saturated.
+- **Multi-Format Polymorphic Loader**: Dynamically supports direct ASCII streaming (`Type::Hex`, `Type::Bas`) and on-the-fly binary formatting (`Type::Bin`) with zero dynamic memory allocation.
+- **Pipelined Stream Injection**: SD file data streams directly through a 64-byte RingBuffer pipeline with real-time video echo draining, keeping the 6821 PIA transmission line fully saturated without buffer overruns.
 - **128-Byte SD Chunk Buffer**: Enlarged SD sector read buffer reduces Petit FatFs `CMD17` SPI block transactions by 50%.
 - **8MHz Hardware SPI Acceleration**: Uses maximum AVR SPI clock speed (`SPI_CLOCK_DIV2`, 8MHz) with [ino-PetitFatFs-raccoon](https://github.com/neoelec/ino-PetitFatFs-raccoon) for 2x storage throughput.
 - **Fast File Open**: Direct root directory file traversal eliminates redundant filesystem re-mounts with automated fallback recovery.
@@ -211,31 +210,42 @@ Connect via any serial terminal emulator (e.g. Minicom, PuTTY, screen, miniterm)
 - **Stop Bits**: `1`
 - **Flow Control**: `None`
 
-### 4. Interactive Console Menu (`Ctrl+R`)
+### 4. Interactive Console Menu (`Ctrl+R` - CFFA-1 Style)
 
-Press <kbd>Ctrl</kbd> + <kbd>R</kbd> at any time in the terminal to enter the Raccoon Menu:
+Press <kbd>Ctrl</kbd> + <kbd>R</kbd> at any time in the terminal to enter the CFFA-1 Storage Menu:
 
 ```text
--?
-s - Select Directory
-l - List Programs
-o - Load Program
-x - Exit
-p - PIO Reset
-w - Warm Reset
-? - Help
--
+========================================
+           CFFA-1 FOR RC6502            
+========================================
+  C - CATALOG
+  P - PREFIX
+  L - LOAD FILE
+  I - PROGRAM INFO
+  M - MEMORY DISPLAY
+  T - TOGGLE TERSE MODE
+  R - WARM RESET (CPU)
+  W - PIO RESET (MCU)
+  Q - QUIT TO MONITOR
+  ? - HELP
+
+PFX: /SYSTEM/ | MODE: VERBOSE
+
+ENTER SELECTION: 
 ```
 
 | Command | Action | Description |
 | :---: | :--- | :--- |
-| `s` | **Select Directory** | Switch directory category (`00`, `01`, `02`, etc.) |
-| `l` | **List Programs** | List available programs in current directory (paginated, 20 per page) |
-| `o` | **Load Program** | Enter program number to automatically inject into 6502 memory |
-| `w` | **Warm Reset** | Pulse 6502 hardware reset line and reset I/O expander |
-| `p` | **PIO Reset** | Trigger Arduino watchdog timer (`WDTO_15MS`) to reboot PIO firmware |
-| `x` | **Exit** | Exit menu and return to 6502 terminal mode |
-| `?` | **Help** | Display command menu list |
+| `C` | **Catalog** | 16-line paginated catalog in 40-column standard format (`-- MORE --` direct load supported) |
+| `P` | **Prefix** | Set directory prefix (`SYSTEM`, `GAMES`, `EXTBAS`, `00`, `01`, `02`, or `?` for list) |
+| `L` | **Load File** | Enter file name (e.g. `MICROCHE`) or program number to inject into 6502 memory |
+| `I` | **Program Info** | Display rich 40-column information card with file path, load/run addresses, and run hint |
+| `M` | **Memory Display**| Enter memory address range (e.g. `1000.10FF`) to inspect 6502 memory contents |
+| `T` | **Terse Mode** | Toggle between Standard (40-col) and Compact (40-col) catalog listing |
+| `R` | **Warm Reset** | Pulse 6502 hardware reset line and reset I/O expander |
+| `W` | **PIO Reset** | Trigger Arduino watchdog timer (`WDTO_15MS`) to reboot PIO controller firmware |
+| `Q` / `X` | **Quit** | Exit menu and return to Woz Monitor (`\`) mode |
+| `?` / `H` | **Help** | Display CFFA-1 command menu |
 
 ---
 
@@ -243,20 +253,29 @@ w - Warm Reset
 
 ### SD Card Contents Organization
 
-- **`contents/00/`**: Machine code binaries, assemblers, monitors, and languages:
-  - *Apple 30th Anniversary, UltraForth-83, Krusader, Microchess, Disassembler, EhBASIC, TinyBASIC, MemTest, etc.*
-- **`contents/01/`**: Integer BASIC applications and retro games:
-  - *21 (Blackjack), AceyDucey, Bowling, Buzzword, Craps, Deal, Hamurabi, StarTrek, Wumpus, Slots, etc.*
-- **`contents/02/`**: Extended BASIC programs:
-  - *Eliza, Gomoku, Hangman, Lunar Lander, Magic Square, Matrix, Reverse, RSP, Sudoku, Tic-Tac-Toe, Yahtzee, etc.*
+The SD card is structured with a root master prefix index (`PREFIX.CSV`) and directory-level catalog tables (`CATALOG.CSV`):
 
-### ➕ Adding New Programs to SD Card (`HEX`, `BAS`, `BIN`)
+```text
+SD Card Root /
+├── PREFIX.CSV          <-- Master prefix/directory catalog
+├── SYSTEM/             <-- Machine code binaries, assemblers, monitors, and languages (Index: 00)
+│   ├── CATALOG.CSV     <-- Directory catalog table
+│   ├── APPLE30T.TXT
+│   └── MICROCHE.TXT
+├── GAMES/              <-- Integer BASIC applications and retro games (Index: 01)
+│   ├── CATALOG.CSV
+│   ├── HAMURABI.TXT
+│   └── 21.TXT
+└── EXTBAS/             <-- Extended BASIC programs (Index: 02)
+    ├── CATALOG.CSV
+    └── ELIZA.BAS
+```
 
-To add your own programs to the SD card catalog, place the program data file in the target category folder (e.g., `contents/00/`, `contents/01/`, `contents/02/`) and create a corresponding `PGMxxx.CSV` metadata index file.
+### ➕ Adding New Programs to SD Card (`CATALOG.CSV`)
 
-#### 1. Metadata Index File Format (`PGMxxx.CSV`)
+To add programs to a category folder, simply copy your data files into that directory and append entries into the directory's **`CATALOG.CSV`** (single unified CSV per directory).
 
-Each program requires an index file named `PGMxxx.CSV` (where `xxx` is a 3-digit zero-padded index from `000` to `999` representing the program number):
+#### 1. Directory Catalog File Format (`CATALOG.CSV`)
 
 ```csv
 <PROGRAM_NAME>,<TYPE>,<FILE_PATH>,<LOAD_ADDRESS_HEX>,<RUN_ADDRESS_HEX>
@@ -264,24 +283,38 @@ Each program requires an index file named `PGMxxx.CSV` (where `xxx` is a 3-digit
 
 | Field | Description | Constraints & Examples |
 | :--- | :--- | :--- |
-| **`PROGRAM_NAME`** | Display name shown in the interactive menu | Max 23 characters (e.g., `APPLE 30TH`, `MY GAME`) |
-| **`TYPE`** | Storage and stream injection format | `HEX` (Woz Hex Dump), `BAS` or `BAS/W` (BASIC Dump), `BIN` (Raw Binary) |
-| **`FILE_PATH`** | Relative path to the data file on the SD card | 8.3 uppercase format (e.g., `00/APPLE30T.TXT`, `00/MCHESS.BIN`) |
-| **`LOAD_ADDRESS`** | 16-bit start memory address in Hexadecimal | e.g., `0280`, `004A`, `1000` |
+| **`PROGRAM_NAME`** | Display name shown in the interactive menu | Max 23 characters (up to 19 chars in Verbose mode, 23 in Terse mode) |
+| **`TYPE`** | Storage and stream injection format | `HEX` (Woz Hex Dump), `BAS` or `BAS/W` (BASIC Dump), `BIN` (Raw Binary), `DIR` (Subdirectory) |
+| **`FILE_PATH`** | Relative path to the data file on the SD card | 8.3 uppercase format (e.g., `SYSTEM/APPLE30T.TXT`, `SYSTEM/MICROCHE.TXT`) |
+| **`LOAD_ADDRESS`** | 16-bit start memory address in Hexadecimal | e.g., `0280`, `004A`, `1000`, `$1000` |
 | **`RUN_ADDRESS`** | 16-bit entry point / run address in Hexadecimal | e.g., `0280`, `E2B3` (BASIC Warm Entry), `E000` |
+
+#### 2. Root Prefix Index Format (`PREFIX.CSV`)
+
+```csv
+<PREFIX_DIR>,<DESCRIPTION>
+```
+Example:
+```csv
+SYSTEM,System Soft & Languages
+GAMES,Integer BASIC Games
+EXTBAS,Extended BASIC Programs
+```
+> [!NOTE]
+> Each row order in `PREFIX.CSV` (0, 1, 2...) is dynamically mapped to numeric index shortcuts (`00`, `01`, `02`, etc.). Users can switch directories at the `P` prompt by entering either the directory name (e.g. `SYSTEM`) or its numeric index (`00`).
 
 ---
 
-#### 2. Supported Formats & Usage
+#### 3. Supported Formats & Usage
 
 ##### A. Woz Monitor ASCII Hex Format (`Type::Hex` / `.TXT`)
 * **Format**: Standard Apple 1 Woz Monitor ASCII text dump containing `<ADDR>: <HEX_BYTES>` lines.
 * **Loader Mechanism**: Streams ASCII characters directly through the keyboard buffer into the Woz Monitor.
 * **CSV Example**:
   ```csv
-  APPLE 30TH,HEX,00/APPLE30T.TXT,0280,0280
+  APPLE 30TH,HEX,SYSTEM/APPLE30T.TXT,0280,0280
   ```
-* **Data File Example (`00/APPLE30T.TXT`)**:
+* **Data File Example (`SYSTEM/APPLE30T.TXT`)**:
   ```text
   0280: A2 0C BD 8B 02 20 EF FF
   0288: CA D0 F7 60 8D C4 CC D2
@@ -293,9 +326,9 @@ Each program requires an index file named `PGMxxx.CSV` (where `xxx` is a 3-digit
 * **Loader Mechanism**: Streams text directly into memory via Woz Monitor.
 * **CSV Example**:
   ```csv
-  21,BAS/W,01/21.TXT,004A,E2B3
+  21,BAS/W,GAMES/21.TXT,004A,E2B3
   ```
-* **Data File Example (`01/21.TXT`)**:
+* **Data File Example (`GAMES/21.TXT`)**:
   ```text
   004A:       00 08 00 10 CA 0E
   0050: FF FF FF FF FF FF FF FF
@@ -308,29 +341,30 @@ Each program requires an index file named `PGMxxx.CSV` (where `xxx` is a 3-digit
 * **Key Benefits**: Up to **73% smaller file size** on the SD card and significantly faster transfer.
 * **CSV Example**:
   ```csv
-  MICROCHESS,BIN,00/MCHESS.BIN,0280,0280
+  MICROCHESS,BIN,SYSTEM/MCHESS.BIN,0280,0280
   ```
 * **Execution**: In Woz Monitor, type `0280 R` and press Enter.
 
 ---
 
-#### 3. Step-by-Step Guide to Add a New Program
+#### 4. Step-by-Step Guide to Add a New Program
 
 1. **Prepare Program File**:
    * For binary: Assemble your 6502 code to a raw `.bin` file (e.g., `vasm6502_oldstyle -Fbin -dotdir myprog.asm -o MYPROG.BIN`).
    * For Woz Hex / BASIC: Save as an ASCII `.TXT` file.
-   * Copy the file to the target category folder on the Micro-SD card (e.g., `contents/00/MYPROG.BIN`).
-2. **Create Index CSV**:
-   * Determine the next available program number in that directory (e.g., `PGM013.CSV`).
-   * Write the 5 comma-separated fields:
+   * Copy the file to the target category folder on the Micro-SD card (e.g., `contents/SYSTEM/MYPROG.BIN`).
+2. **Add Entry to `CATALOG.CSV`**:
+   * Open the directory's `CATALOG.CSV` (e.g., `contents/SYSTEM/CATALOG.CSV`).
+   * Append a new line with the 5 comma-separated fields:
      ```csv
-     MY COOL PROG,BIN,00/MYPROG.BIN,0280,0280
+     MY COOL PROG,BIN,SYSTEM/MYPROG.BIN,0280,0280
      ```
-3. **Load and Run via Interactive Menu**:
+3. **Load and Run via Interactive CFFA-1 Menu**:
    * Insert the Micro-SD card into the RC6502 Raccoon board.
-   * In the serial console, press <kbd>Ctrl</kbd> + <kbd>R</kbd> to open the menu.
-   * Press `s` to select directory (e.g., `0`), `l` to list programs, then `o` and enter the program number (e.g., `13`).
-   * The firmware will automatically inject the code into 6502 memory and return to the Woz Monitor prompt.
+   * In the serial console, press <kbd>Ctrl</kbd> + <kbd>R</kbd> to open the CFFA-1 menu.
+   * Press `P` to select directory prefix (e.g., `SYSTEM`, `GAMES`, `00`), `C` to list catalog, then `L` and enter the program name (e.g., `MY COOL PROG`) or number.
+   * The firmware will automatically inject the code into 6502 memory.
+   * Press `Q` to exit to Woz Monitor and run the entry vector (e.g., `0280R`).
 
 ### Raccoon's Custom ROM (`rom/rc6502_crom_00`)
 
@@ -352,9 +386,9 @@ The ROM binary image is located at [`rom/rc6502_crom_00/rc6502_crom_00.bin`](rom
 | ![Boot](./images/rc6502-00.png) | ![Menu](./images/rc6502-01.png) |
 | **Loading Program from SD** | **Integer BASIC Execution** |
 | ![Loading](./images/rc6502-02.png) | ![Basic](./images/rc6502-03.png) |
-| **Krusader Assembler** | **Disassembler / Utilities** |
+| **Integer BASIC Executionr** | **Extended BASIC Execution** |
 | ![Krusader](./images/rc6502-04.png) | ![Disassembler](./images/rc6502-05.png) |
-| **Retro Game Gameplay** | |
+| **Extended BASIC Execution** | |
 | ![Game](./images/rc6502-06.png) | |
 
 ---

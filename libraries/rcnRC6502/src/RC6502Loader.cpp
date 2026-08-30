@@ -76,16 +76,17 @@ bool RC6502Loader::openFile(RC6502Sd *sd, const char *file_name)
   return true;
 }
 
+static uint8_t s_sd_chunk_buf[128];
+
 bool RC6502Loader::streamTextFile(RC6502Sd *sd, RC6502Kbd *kbd, RC6502Video *video, const char *file_name)
 {
   bool empty_file = true;
-  uint8_t buffer[128];
   uint8_t error = FR_OK;
   uint8_t sz_read = 0;
 
   do
   {
-    error = sd->read(buffer, sizeof(buffer), sz_read);
+    error = sd->read(s_sd_chunk_buf, sizeof(s_sd_chunk_buf), sz_read);
     if (sz_read > 0)
     {
       empty_file = false;
@@ -99,9 +100,9 @@ bool RC6502Loader::streamTextFile(RC6502Sd *sd, RC6502Kbd *kbd, RC6502Video *vid
 
     for (uint8_t i = 0; i < sz_read; i++)
     {
-      feedCharPipelined(kbd, video, static_cast<char>(buffer[i]));
+      feedCharPipelined(kbd, video, static_cast<char>(s_sd_chunk_buf[i]));
     }
-  } while (sz_read == sizeof(buffer));
+  } while (sz_read == sizeof(s_sd_chunk_buf));
 
   if (empty_file)
   {
@@ -123,14 +124,13 @@ bool RC6502Loader::streamTextFile(RC6502Sd *sd, RC6502Kbd *kbd, RC6502Video *vid
 bool RC6502Loader::streamBinaryFile(RC6502Sd *sd, RC6502Kbd *kbd, RC6502Video *video, const char *file_name, uint16_t start_address)
 {
   bool empty_file = true;
-  uint8_t buffer[128];
   uint8_t error = FR_OK;
   uint8_t sz_read = 0;
   uint16_t current_addr = start_address;
 
   do
   {
-    error = sd->read(buffer, sizeof(buffer), sz_read);
+    error = sd->read(s_sd_chunk_buf, sizeof(s_sd_chunk_buf), sz_read);
     if (sz_read > 0)
     {
       empty_file = false;
@@ -156,7 +156,7 @@ bool RC6502Loader::streamBinaryFile(RC6502Sd *sd, RC6502Kbd *kbd, RC6502Video *v
       // Output data bytes (e.g. "A9 FF 48 ...")
       for (uint8_t j = 0; j < chunk_len; j++)
       {
-        feedHexByte(kbd, video, buffer[offset + j]);
+        feedHexByte(kbd, video, s_sd_chunk_buf[offset + j]);
         if (j + 1 < chunk_len)
         {
           feedCharPipelined(kbd, video, ' ');
@@ -169,7 +169,7 @@ bool RC6502Loader::streamBinaryFile(RC6502Sd *sd, RC6502Kbd *kbd, RC6502Video *v
       current_addr += chunk_len;
       offset += chunk_len;
     }
-  } while (sz_read == sizeof(buffer));
+  } while (sz_read == sizeof(s_sd_chunk_buf));
 
   if (empty_file)
   {

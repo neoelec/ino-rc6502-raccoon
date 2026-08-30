@@ -11,9 +11,22 @@
 #include "RC6502Utils.h"
 
 #define SZ_BUF 32
-#define SZ_CSV_BUF (SZ_BUF * 3)
+#define SZ_CSV_BUF 64
 
 #define CSV_NAME_FMT "yy/PGMxxx.CSV"
+
+static void trimTrailing(char *str)
+{
+  if (!str)
+  {
+    return;
+  }
+  size_t len = strlen(str);
+  while (len > 0 && (str[len - 1] == '\r' || str[len - 1] == '\n' || str[len - 1] == ' ' || str[len - 1] == '\t'))
+  {
+    str[--len] = '\0';
+  }
+}
 
 bool RC6502Pgm::begin(RC6502Sd *sd)
 {
@@ -149,6 +162,8 @@ void RC6502Pgm::parseCsv(char *csv)
 void RC6502Pgm::parseToken(char *token, uint8_t i)
 {
   long tmp;
+
+  trimTrailing(token);
 
   switch (i)
   {

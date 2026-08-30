@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2022-2026 YOUNGJIN JOO (neoelec@gmail.com)
 
+#include <avr/wdt.h>
+
 #include <rcnRC6502.h>
 
 static bool isClassicMode(void)
@@ -10,6 +12,9 @@ static bool isClassicMode(void)
 
 void setup(void)
 {
+  MCUSR = 0;
+  wdt_disable();
+
   if (isClassicMode())
   {
     RC6502Pio.beginClassic();

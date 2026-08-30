@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2022-2026 YOUNGJIN JOO (neoelec@gmail.com)
 
+#include <avr/wdt.h>
+
 #include <Arduino.h>
 
 #include "RC6502Pio.h"
@@ -13,6 +15,9 @@ RC6502PioClass RC6502Pio;
 
 void RC6502PioClass::begin(void)
 {
+  MCUSR = 0;
+  wdt_disable();
+
   dev_.begin();
   beginCommon();
   RC6502Menu.begin(dev_);
@@ -23,6 +28,9 @@ void RC6502PioClass::begin(void)
 
 void RC6502PioClass::beginClassic(void)
 {
+  MCUSR = 0;
+  wdt_disable();
+
   dev_.beginNoSd();
   beginCommon();
   state_ = State::Classic;

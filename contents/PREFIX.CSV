@@ -1,3 +1,5 @@
-SYSTEM,System Soft & Languages
-GAMES,Integer BASIC Games
-EXTBAS,Extended BASIC Programs
+ASOFT,Applesoft BASIC Programs
+BASIC,Integer BASIC Programs
+LANGS,Languages & Assemblers
+MCODE,Machine Code Programs
+UTILS,CFFA System Utilities

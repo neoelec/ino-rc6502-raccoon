@@ -258,17 +258,24 @@ The SD card is structured with a root master prefix index (`PREFIX.CSV`) and dir
 ```text
 SD Card Root /
 ├── PREFIX.CSV          <-- Master prefix/directory catalog
-├── SYSTEM/             <-- Machine code binaries, assemblers, monitors, and languages (Index: 00)
+├── ASOFT/              <-- Applesoft BASIC programs and interpreters (Index: 00)
 │   ├── CATALOG.CSV     <-- Directory catalog table
-│   ├── APPLE30T.TXT
-│   └── MICROCHE.TXT
-├── GAMES/              <-- Integer BASIC applications and retro games (Index: 01)
+│   └── LEMO.TXT
+├── BASIC/              <-- Integer BASIC programs and classic games (Index: 01)
 │   ├── CATALOG.CSV
 │   ├── HAMURABI.TXT
 │   └── 21.TXT
-└── EXTBAS/             <-- Extended BASIC programs (Index: 02)
+├── LANGS/              <-- Assemblers, monitors, and language environments (Index: 02)
+│   ├── CATALOG.CSV
+│   ├── MSBASIC.TXT
+│   └── KRUSAD13.TXT
+├── MCODE/              <-- Machine code programs and arcade games (Index: 03)
+│   ├── CATALOG.CSV
+│   ├── ADVENTUR.TXT
+│   └── MICROCHE.TXT
+└── UTILS/              <-- System utilities and diagnostic tools (Index: 04)
     ├── CATALOG.CSV
-    └── ELIZA.BAS
+    └── MEMTEST.TXT
 ```
 
 ### ➕ Adding New Programs to SD Card (`CATALOG.CSV`)
@@ -285,7 +292,7 @@ To add programs to a category folder, simply copy your data files into that dire
 | :--- | :--- | :--- |
 | **`PROGRAM_NAME`** | Display name shown in the interactive menu | Max 23 characters (up to 19 chars in Verbose mode, 23 in Terse mode) |
 | **`TYPE`** | Storage and stream injection format | `HEX` (Woz Hex Dump), `BAS` or `BAS/W` (BASIC Dump), `BIN` (Raw Binary), `DIR` (Subdirectory) |
-| **`FILE_PATH`** | Relative path to the data file on the SD card | 8.3 uppercase format (e.g., `SYSTEM/APPLE30T.TXT`, `SYSTEM/MICROCHE.TXT`) |
+| **`FILE_PATH`** | Relative path to the data file on the SD card | 8.3 uppercase format (e.g., `MCODE/MICROCHE.TXT`, `BASIC/21.TXT`) |
 | **`LOAD_ADDRESS`** | 16-bit start memory address in Hexadecimal | e.g., `0280`, `004A`, `1000`, `$1000` |
 | **`RUN_ADDRESS`** | 16-bit entry point / run address in Hexadecimal | e.g., `0280`, `E2B3` (BASIC Warm Entry), `E000` |
 
@@ -296,9 +303,11 @@ To add programs to a category folder, simply copy your data files into that dire
 ```
 Example:
 ```csv
-SYSTEM,System Soft & Languages
-GAMES,Integer BASIC Games
-EXTBAS,Extended BASIC Programs
+ASOFT,Applesoft BASIC Programs
+BASIC,Integer BASIC Programs
+LANGS,Languages & Assemblers
+MCODE,Machine Code Programs
+UTILS,CFFA System Utilities
 ```
 > [!NOTE]
 > Each row order in `PREFIX.CSV` (0, 1, 2...) is dynamically mapped to numeric index shortcuts (`00`, `01`, `02`, etc.). Users can switch directories at the `P` prompt by entering either the directory name (e.g. `SYSTEM`) or its numeric index (`00`).

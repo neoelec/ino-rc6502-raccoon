@@ -180,6 +180,10 @@ void RC6502Kbd::handlePollClear(void)
 void RC6502Kbd::handleTimeout(void)
 {
   digitalWrite(PIN_KBD_STR, LOW);
+  if (mcp_)
+  {
+    mcp_->writeGPIOB(0x00);
+  }
   interrupt_ = false;
   state_ = State::Idle;
 }

@@ -22,8 +22,14 @@ void RC6502Clock::begin(void)
 
 void RC6502Clock::enable(void)
 {
-  TCCR1A |= _BV(COM1A0);
-  TCCR1A &= ~_BV(COM1A1);
+  pinMode(PIN_CLK_1MHZ, OUTPUT);
+  digitalWrite(PIN_CLK_1MHZ, LOW);
+
+  // Synchronize Timer1 start to guarantee clean 500ns initial half-cycle without runt pulses
+  GTCCR = _BV(TSM) | _BV(PSRSYNC);
+  TCNT1 = 0;
+  TCCR1A = _BV(COM1A0);
+  GTCCR = 0;
 }
 
 void RC6502Clock::disable(void)
@@ -31,6 +37,7 @@ void RC6502Clock::disable(void)
   TCCR1A &= ~(_BV(COM1A1) | _BV(COM1A0));
 
   pinMode(PIN_nRESET, INPUT); // Hi-Z
+  digitalWrite(PIN_nRESET, LOW); // Ensure internal pull-up is disabled
 
   pinMode(PIN_CLK_1MHZ, OUTPUT);
   digitalWrite(PIN_CLK_1MHZ, LOW);

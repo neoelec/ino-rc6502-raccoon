@@ -72,9 +72,9 @@ void RC6502Dev::initKbd(void)
   kbd_.begin(&mcp_);
   s_kbd = &kbd_;
 
-  // Clear any pending INT0 interrupt flag before attaching
-  EIFR = _BV(INTF0);
-  attachInterrupt(digitalPinToInterrupt(PIN_KBD_CLR), ISR_RC6502KbdSetInterrupt, CHANGE);
+  // Trigger on RISING edge (6821 PIA KBD Read pulse rising edge)
+  attachInterrupt(digitalPinToInterrupt(PIN_KBD_CLR), ISR_RC6502KbdSetInterrupt, RISING);
+  EIFR = _BV(INTF0); // Clear any pending flag generated during configuration
 }
 
 void RC6502Dev::initVideo(void)
@@ -82,9 +82,9 @@ void RC6502Dev::initVideo(void)
   video_.begin(&mcp_);
   s_video = &video_;
 
-  // Clear any pending INT1 interrupt flag before attaching
-  EIFR = _BV(INTF1);
+  // Trigger on RISING edge (6821 PIA Video DA pulse rising edge)
   attachInterrupt(digitalPinToInterrupt(PIN_VIDEO_DA), ISR_RC6502VideoSetInterrupt, RISING);
+  EIFR = _BV(INTF1); // Clear any pending flag generated during configuration
 }
 
 void RC6502Dev::initMcp(void)

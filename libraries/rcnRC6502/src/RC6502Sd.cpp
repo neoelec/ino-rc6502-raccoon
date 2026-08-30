@@ -20,7 +20,7 @@ bool RC6502Sd::begin(uint8_t pin_ss)
 
   if (error != FR_OK)
   {
-    printError(static_cast<uint8_t>(error), MOUNT);
+    printError(static_cast<uint8_t>(error), Operation::Mount);
     return false;
   }
 
@@ -39,7 +39,7 @@ uint8_t RC6502Sd::open(const char *file_name)
   return static_cast<uint8_t>(error);
 }
 
-void RC6502Sd::printError(uint8_t error, uint8_t operation, const char *file_name)
+void RC6502Sd::printError(uint8_t error, Operation operation, const char *file_name)
 {
   printErrorCode(static_cast<FRESULT>(error));
   printOperation(operation);
@@ -99,25 +99,25 @@ void RC6502Sd::printErrorCode(FRESULT error)
   Serial.print(F(")"));
 }
 
-void RC6502Sd::printOperation(uint8_t operation)
+void RC6502Sd::printOperation(Operation operation)
 {
   Serial.print(F(" on "));
 
   switch (operation)
   {
-  case MOUNT:
+  case Operation::Mount:
     Serial.print(F("MOUNT"));
     break;
-  case OPEN:
+  case Operation::Open:
     Serial.print(F("OPEN"));
     break;
-  case READ:
+  case Operation::Read:
     Serial.print(F("READ"));
     break;
-  case WRITE:
+  case Operation::Write:
     Serial.print(F("WRITE"));
     break;
-  case SEEK:
+  case Operation::Seek:
     Serial.print(F("SEEK"));
     break;
   default:

@@ -29,6 +29,11 @@ namespace RC6502Utils
       Serial.write(' ');
     }
   }
+
+  inline void printPrefix(void)
+  {
+    Serial.print(F("RCN: "));
+  }
 }
 
 #endif // RCN_RC6502_UTILS_H

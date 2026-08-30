@@ -12,11 +12,11 @@
 class RC6502Pgm
 {
 public:
-  enum
+  enum class Type : uint8_t
   {
-    TYPE_UNKNOWN,
-    TYPE_HEX,
-    TYPE_BIN
+    Unknown = 0,
+    Hex,
+    Bin
   };
 
   bool begin(RC6502Sd *sd);
@@ -24,7 +24,7 @@ public:
   bool begin(RC6502Sd *sd, const char *csv_name);
 
   const char *getDescription(void) const;
-  uint8_t getType(void) const;
+  Type getType(void) const;
   const char *getTypeT(void) const;
   const char *getPgmFile(void) const;
   uint16_t getLoadAddress(void) const;
@@ -44,7 +44,7 @@ private:
   RC6502Sd *sd_{nullptr};
 
   char description_[24]{0};
-  uint8_t type_{TYPE_UNKNOWN};
+  Type type_{Type::Unknown};
   char type_t_[8]{0};
   char pgm_file_[16]{0};
   uint16_t load_address_{0};

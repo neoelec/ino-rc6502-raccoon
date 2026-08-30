@@ -11,13 +11,13 @@
 class RC6502Sd
 {
 public:
-  enum
+  enum class Operation : uint8_t
   {
-    MOUNT = 0,
-    OPEN,
-    READ,
-    WRITE,
-    SEEK,
+    Mount = 0,
+    Open,
+    Read,
+    Write,
+    Seek,
   };
 
   bool begin(uint8_t pin_ss);
@@ -26,12 +26,12 @@ public:
   inline uint8_t read(void *buf, uint8_t sz_to_read, uint8_t &sz_read);
   inline uint8_t write(const void *buf, uint8_t sz_to_write, uint8_t &sz_wrote);
   inline uint8_t lseek(uint32_t sz_offset);
-  void printError(uint8_t error, uint8_t operation, const char *file_name = nullptr);
+  void printError(uint8_t error, Operation operation, const char *file_name = nullptr);
   void waitKey(void);
 
 private:
   void printErrorCode(FRESULT error);
-  void printOperation(uint8_t operation);
+  void printOperation(Operation operation);
   void waitTtyRx(void);
 
   FATFS fatfs_;

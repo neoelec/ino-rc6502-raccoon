@@ -51,7 +51,7 @@ const char *RC6502Pgm::getDescription(void) const
   return description_;
 }
 
-uint8_t RC6502Pgm::getType(void) const
+RC6502Pgm::Type RC6502Pgm::getType(void) const
 {
   return type_;
 }
@@ -122,7 +122,7 @@ bool RC6502Pgm::openCsv(const char *csv_name)
     return true;
   }
 
-  sd_->printError(error, RC6502Sd::OPEN, csv_name);
+  sd_->printError(error, RC6502Sd::Operation::Open, csv_name);
   return false;
 }
 
@@ -137,7 +137,7 @@ bool RC6502Pgm::readCsv(char *csv, uint8_t sz_csv, const char *csv_name)
   uint8_t error = sd_->read(csv, sz_csv, sz_read);
   if (error != FR_OK)
   {
-    sd_->printError(error, RC6502Sd::READ, csv_name);
+    sd_->printError(error, RC6502Sd::Operation::Read, csv_name);
     return false;
   }
 
@@ -176,15 +176,15 @@ void RC6502Pgm::parseToken(char *token, uint8_t i)
     type_t_[sizeof(type_t_) - 1] = '\0';
     if (!strcmp(token, "HEX"))
     {
-      type_ = TYPE_HEX;
+      type_ = Type::Hex;
     }
     else if (!strcmp(token, "BIN"))
     {
-      type_ = TYPE_BIN;
+      type_ = Type::Bin;
     }
     else
     {
-      type_ = TYPE_UNKNOWN;
+      type_ = Type::Unknown;
     }
     break;
   case 2: // pgm_file_
@@ -221,7 +221,7 @@ bool RC6502Pgm::beginCsvName(const char *csv_name)
   char csv[SZ_CSV_BUF]{0};
 
   description_[0] = '\0';
-  type_ = TYPE_UNKNOWN;
+  type_ = Type::Unknown;
   type_t_[0] = '\0';
   pgm_file_[0] = '\0';
   load_address_ = 0;

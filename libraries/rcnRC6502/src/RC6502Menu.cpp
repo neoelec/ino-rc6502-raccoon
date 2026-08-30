@@ -8,6 +8,10 @@
 #include "RC6502Menu.h"
 #include "RC6502Utils.h"
 
+constexpr uint8_t DEFAULT_PGM_PER_PAGE = 20;
+constexpr uint8_t MAX_DIR_NUMBER       = 99;
+constexpr uint16_t MAX_PGM_NUMBER      = 999;
+
 RC6502MenuClass RC6502Menu;
 
 void RC6502MenuClass::begin(RC6502Dev &dev)
@@ -71,7 +75,8 @@ void RC6502MenuClass::doCmdExit(void)
 void RC6502MenuClass::doCmdListPrograms(void)
 {
   String str_bm;
-  const uint16_t pgm_per_page = 20;
+  str_bm.reserve(8);
+  const uint16_t pgm_per_page = DEFAULT_PGM_PER_PAGE;
 
   Serial.println();
   Serial.print(F("RCN: PAGE NUMBER [>=0]"));
@@ -99,6 +104,7 @@ void RC6502MenuClass::doCmdListPrograms(void)
 void RC6502MenuClass::doCmdLoadProgram(void)
 {
   String str_bm;
+  str_bm.reserve(8);
 
   Serial.println();
   Serial.print(F("RCN: PROGRAM NUMBER [0 <= pgm <= 999]"));
@@ -109,7 +115,7 @@ void RC6502MenuClass::doCmdLoadProgram(void)
   }
 
   long pgm_number = str_bm.toInt();
-  if (pgm_number < 0 || pgm_number > 999)
+  if (pgm_number < 0 || pgm_number > MAX_PGM_NUMBER)
   {
     Serial.println();
     Serial.print(F("Wrong Value "));
@@ -134,6 +140,7 @@ void RC6502MenuClass::doCmdLoadProgram(void)
 void RC6502MenuClass::doCmdSelectDirectory(void)
 {
   String str_bm;
+  str_bm.reserve(8);
 
   Serial.println();
   Serial.print(F("RCN: DIRECTORY NUMBER [0 <= dir <= 99]"));
@@ -144,7 +151,7 @@ void RC6502MenuClass::doCmdSelectDirectory(void)
   }
 
   long dir_number = str_bm.toInt();
-  if (dir_number < 0 || dir_number > 99)
+  if (dir_number < 0 || dir_number > MAX_DIR_NUMBER)
   {
     Serial.println();
     Serial.print(F("Wrong Value "));
@@ -274,7 +281,7 @@ bool RC6502MenuClass::executeLoadPgmFile(void)
 
     if (error != FR_OK)
     {
-      sd_->printError(error, RC6502Sd::READ, pgm_file);
+      sd_->printError(error, RC6502Sd::Operation::Read, pgm_file);
       return false;
     }
 
@@ -330,7 +337,7 @@ bool RC6502MenuClass::openPgmFile(void)
 
   if (error != FR_OK)
   {
-    sd_->printError(error, RC6502Sd::OPEN, pgm_file);
+    sd_->printError(error, RC6502Sd::Operation::Open, pgm_file);
     return false;
   }
 

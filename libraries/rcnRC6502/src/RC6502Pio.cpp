@@ -52,8 +52,8 @@ void RC6502PioClass::beginClassic(void)
 void RC6502PioClass::printBanner(void)
 {
   Serial.print(F("\033[2J\033[H"));
-  Serial.println(F("RC6502 Apple 1 Replica - Raccoon's Mod"));
-  Serial.println(F("  - Ctrl+R - Raccoon's Menu"));
+  Serial.println(F("RC6502 Apple 1 Replica - CFFA-1 Mode"));
+  Serial.println(F("  - Ctrl+R - CFFA-1 Menu"));
 }
 
 void RC6502PioClass::printClassicBanner(void)

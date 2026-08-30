@@ -28,12 +28,16 @@ void RC6502Video::setInterrupt(void)
 
 bool RC6502Video::run(void)
 {
-  if (!interrupt_ && digitalRead(PIN_VIDEO_DA) != HIGH)
+  uint8_t sreg = SREG;
+  cli();
+  bool has_data = interrupt_ || (digitalRead(PIN_VIDEO_DA) == HIGH);
+  interrupt_ = false;
+  SREG = sreg;
+
+  if (!has_data)
   {
     return false;
   }
-
-  interrupt_ = false;
 
   if (mcp_)
   {
@@ -89,8 +93,8 @@ inline void RC6502Video::printNewline(void)
 
 inline void RC6502Video::putCharDirect(int c)
 {
-  // Filter standard printable ASCII and common control characters (BS, TAB, LF, VT)
-  if ((c >= 0x20 && c <= 0x7E) || c == 0x08 || c == 0x09 || c == 0x0A || c == 0x0B || c == 0x12 || c == 0x13)
+  // Filter standard printable ASCII and common control characters (BEL, BS, TAB, LF, VT, FF, RS, DC3, ESC)
+  if ((c >= 0x20 && c <= 0x7E) || c == 0x07 || c == 0x08 || c == 0x09 || c == 0x0A || c == 0x0B || c == 0x0C || c == 0x12 || c == 0x13 || c == 0x1B)
   {
     Serial.write(static_cast<uint8_t>(c));
   }

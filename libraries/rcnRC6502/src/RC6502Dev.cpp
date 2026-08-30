@@ -6,8 +6,8 @@
 #include "RC6502Dev.h"
 #include "RC6502Pins.h"
 
-static RC6502Kbd *s_kbd = nullptr;     // pointer for interrupt service routine
-static RC6502Video *s_video = nullptr; // pointer for interrupt service routine
+static RC6502Kbd * volatile s_kbd = nullptr;     // pointer for interrupt service routine
+static RC6502Video * volatile s_video = nullptr; // pointer for interrupt service routine
 
 static void ISR_RC6502KbdSetInterrupt(void)
 {

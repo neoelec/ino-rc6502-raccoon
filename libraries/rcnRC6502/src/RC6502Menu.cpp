@@ -28,11 +28,6 @@ void RC6502MenuClass::enter(void)
   done_ = false;
   dir_number_ = 0;
 
-  if (sd_)
-  {
-    sd_->mount();
-  }
-
   menu_cmd_.ShowMenu();
   menu_cmd_.giveCmdPrompt();
 }
@@ -265,7 +260,7 @@ bool RC6502MenuClass::executeLoadPgmFile(void)
 
   const char *pgm_file = pgm_.getPgmFile();
   bool empty_file = true;
-  uint8_t buffer[64];
+  uint8_t buffer[128];
   uint8_t error = FR_OK;
   uint8_t sz_read = 0;
 
@@ -325,14 +320,14 @@ bool RC6502MenuClass::openPgmFile(void)
   }
 
   const char *pgm_file = pgm_.getPgmFile();
-  uint8_t error = sd_->mount();
+  uint8_t error = sd_->open(pgm_file);
   if (error != FR_OK)
   {
-    sd_->printError(error, RC6502Sd::MOUNT);
-    return false;
+    // Re-mount once and retry opening in case filesystem state was invalidated
+    sd_->mount();
+    error = sd_->open(pgm_file);
   }
 
-  error = sd_->open(pgm_file);
   if (error != FR_OK)
   {
     sd_->printError(error, RC6502Sd::OPEN, pgm_file);

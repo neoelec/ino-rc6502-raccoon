@@ -27,6 +27,8 @@ void RC6502MenuClass::begin(RC6502Dev &dev)
   kbd_ = dev.getKbd();
   sd_ = dev.getSd();
   video_ = dev.getVideo();
+  prefix_[0] = '\0';
+  loadDefaultPrefix();
 }
 
 void RC6502MenuClass::enter(void)
@@ -34,8 +36,7 @@ void RC6502MenuClass::enter(void)
   done_ = false;
   if (prefix_[0] == '\0')
   {
-    strncpy(prefix_, "SYSTEM", sizeof(prefix_) - 1);
-    prefix_[sizeof(prefix_) - 1] = '\0';
+    loadDefaultPrefix();
   }
   state_ = State::Command;
   input_len_ = 0;
@@ -213,16 +214,27 @@ bool RC6502MenuClass::resolvePrefix(const char *input, char *out_prefix, size_t 
     return false;
   }
 
-  bool is_digits = true;
-  for (size_t i = 0; input[i] != '\0'; i++)
+  const char *in_ptr = input;
+  while (*in_ptr == '/') in_ptr++;
+  char clean_in[sizeof(prefix_)];
+  strncpy(clean_in, in_ptr, sizeof(clean_in) - 1);
+  clean_in[sizeof(clean_in) - 1] = '\0';
+  size_t in_len = strlen(clean_in);
+  while (in_len > 0 && clean_in[in_len - 1] == '/')
   {
-    if (!isdigit(static_cast<unsigned char>(input[i])))
+    clean_in[--in_len] = '\0';
+  }
+
+  bool is_digits = true;
+  for (size_t i = 0; clean_in[i] != '\0'; i++)
+  {
+    if (!isdigit(static_cast<unsigned char>(clean_in[i])))
     {
       is_digits = false;
       break;
     }
   }
-  long target_idx = is_digits ? atol(input) : -1;
+  long target_idx = is_digits ? atol(clean_in) : -1;
 
   if (sd_)
   {
@@ -241,6 +253,13 @@ bool RC6502MenuClass::resolvePrefix(const char *input, char *out_prefix, size_t 
         token_pfx = RC6502Utils::trim(token_pfx);
         if (token_pfx && *token_pfx)
         {
+          if (*token_pfx == '/') token_pfx++;
+          size_t tlen = strlen(token_pfx);
+          if (tlen > 0 && token_pfx[tlen - 1] == '/')
+          {
+            token_pfx[--tlen] = '\0';
+          }
+
           if (is_digits)
           {
             if (target_idx >= 0 && cur_idx == static_cast<uint16_t>(target_idx))
@@ -252,35 +271,35 @@ bool RC6502MenuClass::resolvePrefix(const char *input, char *out_prefix, size_t 
           }
           else
           {
-            if (strcasecmp(token_pfx, input) == 0)
+            if (strcasecmp(token_pfx, clean_in) == 0)
             {
               strncpy(out_prefix, token_pfx, max_len - 1);
               out_prefix[max_len - 1] = '\0';
               return true;
             }
           }
+          cur_idx++;
         }
-        cur_idx++;
       }
     }
   }
 
   // Fallback for default aliases
-  if (strcmp(input, "00") == 0 || strcmp(input, "0") == 0)
+  if (strcmp(clean_in, "00") == 0 || strcmp(clean_in, "0") == 0)
   {
     strncpy(out_prefix, "SYSTEM", max_len - 1);
   }
-  else if (strcmp(input, "01") == 0 || strcmp(input, "1") == 0)
+  else if (strcmp(clean_in, "01") == 0 || strcmp(clean_in, "1") == 0)
   {
     strncpy(out_prefix, "GAMES", max_len - 1);
   }
-  else if (strcmp(input, "02") == 0 || strcmp(input, "2") == 0)
+  else if (strcmp(clean_in, "02") == 0 || strcmp(clean_in, "2") == 0)
   {
     strncpy(out_prefix, "EXTBAS", max_len - 1);
   }
   else
   {
-    strncpy(out_prefix, input, max_len - 1);
+    strncpy(out_prefix, clean_in, max_len - 1);
   }
   out_prefix[max_len - 1] = '\0';
   return true;
@@ -296,16 +315,26 @@ void RC6502MenuClass::executeSetPrefix(const char *input)
   }
 
   char resolved[sizeof(prefix_)];
-  if (resolvePrefix(input, resolved, sizeof(resolved)))
+  if (!resolvePrefix(input, resolved, sizeof(resolved)))
   {
-    strncpy(prefix_, resolved, sizeof(prefix_) - 1);
-    prefix_[sizeof(prefix_) - 1] = '\0';
+    strncpy(resolved, input, sizeof(resolved) - 1);
+    resolved[sizeof(resolved) - 1] = '\0';
   }
-  else
+
+  char *pfx = resolved;
+  while (*pfx == '/') pfx++;
+  size_t plen = strlen(pfx);
+  while (plen > 0 && pfx[plen - 1] == '/')
   {
-    strncpy(prefix_, input, sizeof(prefix_) - 1);
-    prefix_[sizeof(prefix_) - 1] = '\0';
+    pfx[--plen] = '\0';
   }
+  for (char *p = pfx; *p; p++)
+  {
+    *p = static_cast<char>(toupper(static_cast<unsigned char>(*p)));
+  }
+
+  strncpy(prefix_, pfx, sizeof(prefix_) - 1);
+  prefix_[sizeof(prefix_) - 1] = '\0';
 
   state_ = State::Command;
   Serial.println();
@@ -563,7 +592,31 @@ void RC6502MenuClass::doCmdCatalog(void)
 
 void RC6502MenuClass::doCmdPrefix(void)
 {
-  startPrompt(State::PromptPrefix, F("ENTER PREFIX (00-02, NAME, ?): "));
+  state_ = State::PromptPrefix;
+  input_len_ = 0;
+  input_buf_[0] = '\0';
+
+  pfx_total_entries_ = countPrefixEntries();
+
+  Serial.println();
+  if (pfx_total_entries_ > 1)
+  {
+    Serial.print(F("ENTER PREFIX (00-"));
+    if (pfx_total_entries_ - 1 < 10)
+    {
+      Serial.print('0');
+    }
+    Serial.print(pfx_total_entries_ - 1, DEC);
+    Serial.print(F(", NAME, ?): "));
+  }
+  else if (pfx_total_entries_ == 1)
+  {
+    Serial.print(F("ENTER PREFIX (00, NAME, ?): "));
+  }
+  else
+  {
+    Serial.print(F("ENTER PREFIX (NAME, ?): "));
+  }
 }
 
 void RC6502MenuClass::doCmdLoad(void)
@@ -638,6 +691,55 @@ bool RC6502MenuClass::isDone(void) const
   return done_;
 }
 
+bool RC6502MenuClass::loadDefaultPrefix(void)
+{
+  if (sd_)
+  {
+    uint8_t err = sd_->open("PREFIX.CSV");
+    if (err == FR_OK)
+    {
+      char line[64]{0};
+      while (RC6502Pgm::readLine(sd_, line, sizeof(line)))
+      {
+        char *trimmed = RC6502Utils::trim(line);
+        if (!trimmed || trimmed[0] == '#' || trimmed[0] == '\0')
+        {
+          continue;
+        }
+
+        char *ptr = trimmed;
+        char *token_pfx = strsep(&ptr, ",");
+        token_pfx = RC6502Utils::trim(token_pfx);
+        if (token_pfx && *token_pfx)
+        {
+          if (*token_pfx == '/')
+          {
+            token_pfx++;
+          }
+          size_t plen = strlen(token_pfx);
+          if (plen > 0 && token_pfx[plen - 1] == '/')
+          {
+            token_pfx[plen - 1] = '\0';
+          }
+          for (char *p = token_pfx; *p; p++)
+          {
+            *p = static_cast<char>(toupper(static_cast<unsigned char>(*p)));
+          }
+
+          strncpy(prefix_, token_pfx, sizeof(prefix_) - 1);
+          prefix_[sizeof(prefix_) - 1] = '\0';
+          return true;
+        }
+      }
+    }
+  }
+
+  // Fallback when PREFIX.CSV is missing, unreadable, or contains no valid entry
+  strncpy(prefix_, "SYSTEM", sizeof(prefix_) - 1);
+  prefix_[sizeof(prefix_) - 1] = '\0';
+  return false;
+}
+
 uint16_t RC6502MenuClass::countPrefixEntries(void)
 {
   if (!sd_)
@@ -661,7 +763,14 @@ uint16_t RC6502MenuClass::countPrefixEntries(void)
     {
       continue;
     }
-    count++;
+
+    char *ptr = trimmed;
+    char *token_pfx = strsep(&ptr, ",");
+    token_pfx = RC6502Utils::trim(token_pfx);
+    if (token_pfx && *token_pfx)
+    {
+      count++;
+    }
   }
 
   return count;

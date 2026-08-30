@@ -50,6 +50,7 @@ private:
   void processPromptSubmit(void);
   void startPrompt(State next_state, const __FlashStringHelper *prompt_msg);
 
+  bool loadDefaultPrefix(void);
   uint16_t countCatalogEntries(void);
   uint16_t countPrefixEntries(void);
   void listCatalogPage(uint16_t page_num);
@@ -84,7 +85,7 @@ private:
   uint16_t pfx_total_entries_{0};
 
   RC6502Pgm pgm_;
-  char prefix_[32]{"SYSTEM"};
+  char prefix_[32]{0};
 };
 
 extern RC6502MenuClass RC6502Menu;

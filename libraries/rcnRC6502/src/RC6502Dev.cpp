@@ -95,8 +95,4 @@ void RC6502Dev::initSd(void)
 void RC6502Dev::initTty(void)
 {
   Serial.begin(115200);
-
-  // Clear screen and move cursor to home (0, 0)
-  Serial.print(F("\033[2J\033[H"));
-  Serial.println(F("RC6502 Apple 1 Replica - Raccoon's Mod"));
 }

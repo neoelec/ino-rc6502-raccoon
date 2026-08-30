@@ -13,17 +13,28 @@ constexpr uint8_t KEY_CODE_RS = 0x12; // Ctrl+R
 
 RC6502PioClass RC6502Pio;
 
-void RC6502PioClass::begin(void)
+bool RC6502PioClass::isClassicMode(void)
+{
+  return analogRead(PIN_PIO_MODE) <= 512;
+}
+
+void RC6502PioClass::begin(Mode mode)
 {
   MCUSR = 0;
   wdt_disable();
+
+  if (mode == Mode::Classic || (mode == Mode::Auto && isClassicMode()))
+  {
+    beginClassic();
+    return;
+  }
 
   dev_.begin();
   beginCommon();
   RC6502Menu.begin(dev_);
   state_ = State::Keyboard;
 
-  Serial.println(F("  - Ctrl+R - Raccoon's Menu"));
+  printBanner();
 }
 
 void RC6502PioClass::beginClassic(void)
@@ -34,6 +45,21 @@ void RC6502PioClass::beginClassic(void)
   dev_.beginNoSd();
   beginCommon();
   state_ = State::Classic;
+
+  printClassicBanner();
+}
+
+void RC6502PioClass::printBanner(void)
+{
+  Serial.print(F("\033[2J\033[H"));
+  Serial.println(F("RC6502 Apple 1 Replica - Raccoon's Mod"));
+  Serial.println(F("  - Ctrl+R - Raccoon's Menu"));
+}
+
+void RC6502PioClass::printClassicBanner(void)
+{
+  Serial.print(F("\033[2J\033[H"));
+  Serial.println(F("RC6502 Apple 1 Replica - Classic Mode"));
 }
 
 void RC6502PioClass::run(void)

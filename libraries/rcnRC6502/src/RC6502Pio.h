@@ -9,6 +9,13 @@
 class RC6502PioClass
 {
 public:
+  enum class Mode : uint8_t
+  {
+    Auto,
+    Classic,
+    Modded
+  };
+
   enum class State : uint8_t
   {
     Classic,
@@ -17,12 +24,15 @@ public:
     MenuRun
   };
 
-  void begin(void);
+  void begin(Mode mode = Mode::Auto);
   void beginClassic(void);
   void run(void);
+  static bool isClassicMode(void);
 
 private:
   void beginCommon(void);
+  void printBanner(void);
+  void printClassicBanner(void);
   void handleStateClassic(void);
   void handleStateKeyboard(void);
   void handleStateMenuEnter(void);

@@ -171,17 +171,9 @@ Open [`examples/RC6502/RC6502.ino`](examples/RC6502/RC6502.ino) in the Arduino I
 ```cpp
 #include <rcnRC6502.h>
 
-static bool isClassicMode(void)
-{
-  return analogRead(PIN_PIO_MODE) <= 512;
-}
-
 void setup(void)
 {
-  if (isClassicMode())
-    RC6502Pio.beginClassic();
-  else
-    RC6502Pio.begin();
+  RC6502Pio.begin();
 }
 
 void loop(void)

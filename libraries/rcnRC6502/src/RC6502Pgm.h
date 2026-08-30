@@ -16,12 +16,17 @@ public:
   {
     Unknown = 0,
     Hex,
-    Bin
+    Bin,
+    Bas,
+    Dir
   };
 
+  void reset(void);
   bool begin(RC6502Sd *sd);
-  bool begin(RC6502Sd *sd, uint8_t dir_number, uint16_t pgm_number);
-  bool begin(RC6502Sd *sd, const char *csv_name);
+  bool begin(RC6502Sd *sd, const char *prefix, uint16_t index);
+  bool begin(RC6502Sd *sd, uint8_t dir_number, uint16_t index);
+  bool find(RC6502Sd *sd, const char *prefix, const char *query);
+  bool find(RC6502Sd *sd, uint8_t dir_number, const char *query);
 
   const char *getDescription(void) const;
   Type getType(void) const;
@@ -31,21 +36,19 @@ public:
   uint16_t getRunAddress(void) const;
   void printProgram(void) const;
 
-private:
-  bool openCsv(const char *csv_name);
-  bool readCsv(char *csv, uint8_t sz_csv, const char *csv_name);
+  static bool readLine(RC6502Sd *sd, char *buf, uint8_t max_len);
+  static void buildCatalogPath(char *out_path, size_t max_len, const char *prefix);
   void parseCsv(char *csv);
+
+private:
   void parseToken(char *token, uint8_t i);
-  bool beginPgmNumber(uint8_t dir_number, uint16_t pgm_number);
-  bool beginCsvName(const char *csv_name);
-  void updateCsvName(char *csv_name, uint8_t dir_number, uint16_t pgm_number);
 
 private:
   RC6502Sd *sd_{nullptr};
 
   char description_[24]{0};
   Type type_{Type::Unknown};
-  char pgm_file_[16]{0};
+  char pgm_file_[32]{0};
   uint16_t load_address_{0};
   uint16_t run_address_{0};
 };

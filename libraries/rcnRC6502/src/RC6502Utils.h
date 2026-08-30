@@ -52,6 +52,37 @@ namespace RC6502Utils
     }
     return str;
   }
+
+  inline uint16_t parseHex16(const char *str)
+  {
+    if (!str) return 0;
+    while (*str == ' ' || *str == '$') str++;
+    if (str[0] == '0' && (str[1] == 'x' || str[1] == 'X')) str += 2;
+    uint16_t val = 0;
+    while (*str)
+    {
+      char c = *str++;
+      uint8_t d = 0;
+      if (c >= '0' && c <= '9') d = c - '0';
+      else if (c >= 'A' && c <= 'F') d = c - 'A' + 10;
+      else if (c >= 'a' && c <= 'f') d = c - 'a' + 10;
+      else break;
+      val = (val << 4) | d;
+    }
+    return val;
+  }
+
+  inline uint16_t parseDec16(const char *str)
+  {
+    if (!str) return 0;
+    while (*str == ' ' || *str == '\t') str++;
+    uint16_t val = 0;
+    while (*str >= '0' && *str <= '9')
+    {
+      val = val * 10 + (*str++ - '0');
+    }
+    return val;
+  }
 }
 
 #endif // RCN_RC6502_UTILS_H

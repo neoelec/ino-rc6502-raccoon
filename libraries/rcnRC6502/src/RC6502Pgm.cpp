@@ -63,9 +63,12 @@ void RC6502Pgm::buildCatalogPath(char *out_path, size_t max_len, const char *pre
     return;
   }
 
+  out_path[0] = '\0';
+
   if (!prefix || prefix[0] == '\0' || strcmp(prefix, "/") == 0)
   {
-    snprintf_P(out_path, max_len, PSTR("CATALOG.CSV"));
+    strncpy_P(out_path, PSTR("CATALOG.CSV"), max_len - 1);
+    out_path[max_len - 1] = '\0';
   }
   else
   {
@@ -73,14 +76,17 @@ void RC6502Pgm::buildCatalogPath(char *out_path, size_t max_len, const char *pre
     {
       prefix++;
     }
-    size_t plen = strlen(prefix);
-    if (plen > 0 && prefix[plen - 1] == '/')
+    strncpy(out_path, prefix, max_len - 1);
+    out_path[max_len - 1] = '\0';
+
+    size_t plen = strlen(out_path);
+    if (plen > 0 && out_path[plen - 1] == '/')
     {
-      snprintf_P(out_path, max_len, PSTR("%sCATALOG.CSV"), prefix);
+      strncat_P(out_path, PSTR("CATALOG.CSV"), max_len - plen - 1);
     }
     else
     {
-      snprintf_P(out_path, max_len, PSTR("%s/CATALOG.CSV"), prefix);
+      strncat_P(out_path, PSTR("/CATALOG.CSV"), max_len - plen - 1);
     }
   }
 
@@ -165,7 +171,9 @@ bool RC6502Pgm::begin(RC6502Sd *sd, uint8_t dir_number, uint16_t index)
   }
 
   char pfx[8]{0};
-  snprintf_P(pfx, sizeof(pfx), PSTR("%02d"), dir_number);
+  pfx[0] = '0' + ((dir_number / 10) % 10);
+  pfx[1] = '0' + (dir_number % 10);
+  pfx[2] = '\0';
   return begin(sd, pfx, index);
 }
 
@@ -226,7 +234,9 @@ bool RC6502Pgm::find(RC6502Sd *sd, uint8_t dir_number, const char *query)
   }
 
   char pfx[8]{0};
-  snprintf_P(pfx, sizeof(pfx), PSTR("%02d"), dir_number);
+  pfx[0] = '0' + ((dir_number / 10) % 10);
+  pfx[1] = '0' + (dir_number % 10);
+  pfx[2] = '\0';
   return find(sd, pfx, query);
 }
 
@@ -241,7 +251,7 @@ bool RC6502Pgm::find(RC6502Sd *sd, const char *prefix, const char *query)
   reset();
 
   bool is_digits = isAllDigits(query);
-  long target_idx = is_digits ? atol(query) : -1;
+  long target_idx = is_digits ? static_cast<long>(RC6502Utils::parseDec16(query)) : -1;
 
   char cat_path[32]{0};
   buildCatalogPath(cat_path, sizeof(cat_path), prefix);
@@ -390,8 +400,6 @@ void RC6502Pgm::parseToken(char *token, uint8_t i)
     return;
   }
 
-  unsigned long tmp;
-
   switch (i)
   {
   case 0: // description_
@@ -429,28 +437,10 @@ void RC6502Pgm::parseToken(char *token, uint8_t i)
     }
     break;
   case 3: // load_address_
-    if (token[0] == '$')
-    {
-      token++;
-    }
-    else if (token[0] == '0' && (token[1] == 'x' || token[1] == 'X'))
-    {
-      token += 2;
-    }
-    tmp = strtoul(token, nullptr, 16);
-    load_address_ = (tmp <= 0xFFFFUL) ? static_cast<uint16_t>(tmp) : 0x0000;
+    load_address_ = RC6502Utils::parseHex16(token);
     break;
   case 4: // run_address_
-    if (token[0] == '$')
-    {
-      token++;
-    }
-    else if (token[0] == '0' && (token[1] == 'x' || token[1] == 'X'))
-    {
-      token += 2;
-    }
-    tmp = strtoul(token, nullptr, 16);
-    run_address_ = (tmp <= 0xFFFFUL) ? static_cast<uint16_t>(tmp) : 0x0000;
+    run_address_ = RC6502Utils::parseHex16(token);
     break;
   }
 }

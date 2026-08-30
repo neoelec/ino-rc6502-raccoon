@@ -13,12 +13,31 @@
 
 RC6502MenuClass RC6502Menu;
 
-static inline void printHex4(uint16_t val)
+static void printHex4(uint16_t val)
 {
-  if (val < 0x1000) Serial.print('0');
-  if (val < 0x0100) Serial.print('0');
-  if (val < 0x0010) Serial.print('0');
-  Serial.print(val, HEX);
+  for (int8_t s = 12; s >= 0; s -= 4)
+  {
+    uint8_t nib = (val >> s) & 0x0F;
+    Serial.write(nib < 10 ? ('0' + nib) : ('A' + nib - 10));
+  }
+}
+
+static void printDec2(uint16_t val)
+{
+  if (val < 10)
+  {
+    Serial.write('0');
+  }
+  Serial.print(val, DEC);
+}
+
+static void printDivider(char ch = '-')
+{
+  for (uint8_t i = 0; i < 40; i++)
+  {
+    Serial.write(ch);
+  }
+  Serial.println();
 }
 
 void RC6502MenuClass::begin(RC6502Dev &dev)
@@ -234,7 +253,7 @@ bool RC6502MenuClass::resolvePrefix(const char *input, char *out_prefix, size_t 
       break;
     }
   }
-  long target_idx = is_digits ? atol(clean_in) : -1;
+  long target_idx = is_digits ? static_cast<long>(RC6502Utils::parseDec16(clean_in)) : -1;
 
   if (sd_)
   {
@@ -413,9 +432,9 @@ void RC6502MenuClass::displayProgramInfo(const char *query)
     return;
   }
 
-  Serial.println(F("========================================"));
+  printDivider('=');
   Serial.println(F("          PROGRAM INFORMATION           "));
-  Serial.println(F("========================================"));
+  printDivider('=');
   Serial.print(F("NAME    : "));
   Serial.println(pgm_.getDescription());
 
@@ -451,7 +470,7 @@ void RC6502MenuClass::displayProgramInfo(const char *query)
   printHex4(pgm_.getRunAddress());
   Serial.println();
 
-  Serial.println(F("----------------------------------------"));
+  printDivider('-');
   Serial.print(F("EXECUTE : "));
   if (pgm_.getType() == RC6502Pgm::Type::Dir)
   {
@@ -466,7 +485,7 @@ void RC6502MenuClass::displayProgramInfo(const char *query)
     printHex4(pgm_.getRunAddress());
     Serial.println(F("R in Woz Monitor"));
   }
-  Serial.println(F("========================================"));
+  printDivider('=');
 
   state_ = State::Command;
   printPrompt();
@@ -549,9 +568,9 @@ void RC6502MenuClass::processPromptSubmit(void)
 void RC6502MenuClass::showMenu(void)
 {
   Serial.println();
-  Serial.println(F("========================================"));
+  printDivider('=');
   Serial.println(F("           CFFA-1 FOR RC6502            "));
-  Serial.println(F("========================================"));
+  printDivider('=');
   Serial.println(F("  C - CATALOG"));
   Serial.println(F("  P - PREFIX"));
   Serial.println(F("  L - LOAD FILE"));
@@ -602,11 +621,7 @@ void RC6502MenuClass::doCmdPrefix(void)
   if (pfx_total_entries_ > 1)
   {
     Serial.print(F("ENTER PREFIX (00-"));
-    if (pfx_total_entries_ - 1 < 10)
-    {
-      Serial.print('0');
-    }
-    Serial.print(pfx_total_entries_ - 1, DEC);
+    printDec2(pfx_total_entries_ - 1);
     Serial.print(F(", NAME, ?): "));
   }
   else if (pfx_total_entries_ == 1)
@@ -812,9 +827,9 @@ void RC6502MenuClass::listPrefixesPage(uint16_t page_num)
   Serial.print(F("/"));
   Serial.print(total_pages);
   Serial.println(F("):"));
-  Serial.println(F("----------------------------------------"));
+  printDivider('-');
   Serial.println(F("#   PREFIX   DESCRIPTION"));
-  Serial.println(F("----------------------------------------"));
+  printDivider('-');
 
   char line[64]{0};
   uint16_t idx = 0;
@@ -829,36 +844,29 @@ void RC6502MenuClass::listPrefixesPage(uint16_t page_num)
       continue;
     }
 
-    if (idx >= start_idx && count_in_page < PGM_PER_PAGE)
+    char *ptr = trimmed;
+    char *token_pfx = strsep(&ptr, ",");
+    char *token_desc = strsep(&ptr, ",");
+
+    token_pfx = RC6502Utils::trim(token_pfx);
+    token_desc = RC6502Utils::trim(token_desc);
+
+    if (token_pfx && *token_pfx)
     {
-      char *ptr = trimmed;
-      char *token_pfx = strsep(&ptr, ",");
-      char *token_desc = strsep(&ptr, ",");
-
-      token_pfx = RC6502Utils::trim(token_pfx);
-      token_desc = RC6502Utils::trim(token_desc);
-
-      if (token_pfx && *token_pfx)
+      if (idx >= start_idx && count_in_page < PGM_PER_PAGE)
       {
-        // Format index (#)
-        if (idx < 10)
-        {
-          Serial.print('0');
-        }
-        size_t n = Serial.print(idx, DEC);
+        printDec2(idx);
         Serial.print(F("  "));
 
-        // Format prefix name (clamped to 8 chars for 40-col fit)
         char pfx_buf[9]{0};
         strncpy(pfx_buf, token_pfx, 8);
         pfx_buf[8] = '\0';
-        n = Serial.print(pfx_buf);
+        size_t n = Serial.print(pfx_buf);
         if (9 > n)
         {
           RC6502Utils::printSpaces(9 - n);
         }
 
-        // Format description (strictly truncated to 27 chars for 40-col fit)
         if (token_desc)
         {
           char desc_buf[28]{0};
@@ -876,10 +884,11 @@ void RC6502MenuClass::listPrefixesPage(uint16_t page_num)
           break;
         }
       }
+      idx++;
     }
-    idx++;
   }
-  Serial.println(F("----------------------------------------"));
+
+  printDivider('-');
 
   if (page_num + 1 < total_pages)
   {
@@ -1040,25 +1049,21 @@ void RC6502MenuClass::listCatalogPage(uint16_t page_num)
   Serial.print(total_pages);
   Serial.println(F(")"));
 
+  printDivider('-');
   if (terse_mode_)
   {
-    Serial.println(F("----------------------------------------"));
     Serial.println(F("#   NAME                    TYPE LOAD   "));
-    Serial.println(F("----------------------------------------"));
   }
   else
   {
-    Serial.println(F("----------------------------------------"));
     Serial.println(F("#   NAME                TYPE LOAD  RUN  "));
-    Serial.println(F("----------------------------------------"));
   }
+  printDivider('-');
 
   char line[64]{0};
   uint16_t idx = 0;
   uint16_t start_idx = page_num * PGM_PER_PAGE;
   uint16_t count_in_page = 0;
-  size_t n;
-  RC6502Pgm pgm_tmp;
 
   while (RC6502Pgm::readLine(sd_, line, sizeof(line)))
   {
@@ -1070,67 +1075,37 @@ void RC6502MenuClass::listCatalogPage(uint16_t page_num)
 
     if (idx >= start_idx && count_in_page < PGM_PER_PAGE)
     {
-      pgm_tmp.parseCsv(trimmed);
+      pgm_.parseCsv(trimmed);
       count_in_page++;
 
-      // Format index (e.g. "00. ")
-      if (idx < 10)
-      {
-        Serial.print('0');
-      }
-      n = Serial.print(idx, DEC);
+      printDec2(idx);
       Serial.print(F(". "));
 
-      if (terse_mode_)
+      uint8_t name_max = terse_mode_ ? 23 : 19;
+      char short_name[24]{0};
+      strncpy(short_name, pgm_.getDescription(), name_max);
+      short_name[name_max] = '\0';
+      size_t n = Serial.print(short_name);
+      uint8_t pad_to = name_max + 1;
+      if (pad_to > n)
       {
-        // Name: up to 23 chars + 1 space = 24 chars
-        char short_name[24]{0};
-        strncpy(short_name, pgm_tmp.getDescription(), 23);
-        short_name[23] = '\0';
-        n = Serial.print(short_name);
-        if (24 > n)
-        {
-          RC6502Utils::printSpaces(24 - n);
-        }
-
-        // Type: up to 4 chars + 1 space = 5 chars
-        n = Serial.print(pgm_tmp.getTypeT());
-        if (5 > n)
-        {
-          RC6502Utils::printSpaces(5 - n);
-        }
-
-        // Load: 4-digit hex zero padded
-        printHex4(pgm_tmp.getLoadAddress());
-        Serial.println();
+        RC6502Utils::printSpaces(pad_to - n);
       }
-      else
+
+      n = Serial.print(pgm_.getTypeT());
+      if (5 > n)
       {
-        // Name: strictly clamped to 19 chars + 1 space = 20 chars
-        char short_name[20]{0};
-        strncpy(short_name, pgm_tmp.getDescription(), 19);
-        short_name[19] = '\0';
-        n = Serial.print(short_name);
-        if (20 > n)
-        {
-          RC6502Utils::printSpaces(20 - n);
-        }
+        RC6502Utils::printSpaces(5 - n);
+      }
 
-        // Type: 4 chars + 1 space = 5 chars
-        n = Serial.print(pgm_tmp.getTypeT());
-        if (5 > n)
-        {
-          RC6502Utils::printSpaces(5 - n);
-        }
+      printHex4(pgm_.getLoadAddress());
 
-        // Load: 4-digit hex zero padded (4 chars) + 2 spaces = 6 chars
-        printHex4(pgm_tmp.getLoadAddress());
+      if (!terse_mode_)
+      {
         Serial.print(F("  "));
-
-        // Run: 4-digit hex zero padded (4 chars)
-        printHex4(pgm_tmp.getRunAddress());
-        Serial.println();
+        printHex4(pgm_.getRunAddress());
       }
+      Serial.println();
 
       if (count_in_page >= PGM_PER_PAGE)
       {
@@ -1140,7 +1115,7 @@ void RC6502MenuClass::listCatalogPage(uint16_t page_num)
     idx++;
   }
 
-  Serial.println(F("----------------------------------------"));
+  printDivider('-');
 
   if (page_num + 1 < total_pages)
   {

@@ -83,6 +83,8 @@ void RC6502PioClass::run(void)
 
 void RC6502PioClass::beginCommon(void)
 {
+  RC6502Utils::flushTtyRx();
+
   clk_src_ = dev_.getClock();
   kbd_ = dev_.getKbd();
   video_ = dev_.getVideo();

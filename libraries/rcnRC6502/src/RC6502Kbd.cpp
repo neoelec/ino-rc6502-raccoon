@@ -20,6 +20,7 @@ void RC6502Kbd::reset(void)
 {
   initMcp();
   initPin();
+  serial_buf_.clear();
   interrupt_ = false;
   strobe_start_ms_ = 0;
   state_ = State::Idle;

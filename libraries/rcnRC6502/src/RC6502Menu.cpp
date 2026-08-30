@@ -258,14 +258,14 @@ void RC6502MenuClass::loadPgmFile(void)
 
 bool RC6502MenuClass::executeLoadPgmFile(void)
 {
-  if (!sd_)
+  if (!sd_ || !kbd_ || !video_)
   {
     return false;
   }
 
   const char *pgm_file = pgm_.getPgmFile();
   bool empty_file = true;
-  uint8_t buffer[32];
+  uint8_t buffer[64];
   uint8_t error = FR_OK;
   uint8_t sz_read = 0;
 
@@ -285,8 +285,18 @@ bool RC6502MenuClass::executeLoadPgmFile(void)
 
     for (uint8_t i = 0; i < sz_read; i++)
     {
-      busyWaitConsole();
+      // If the keyboard buffer is full, process FSM until space is available
+      while (kbd_->isBufferFull())
+      {
+        kbd_->run();
+        video_->run();
+      }
+
       feedOneCharacter(buffer[i]);
+
+      // Step the FSM forward immediately to keep transmission pipeline saturated
+      kbd_->run();
+      video_->run();
     }
   } while (sz_read == sizeof(buffer));
 
@@ -297,7 +307,10 @@ bool RC6502MenuClass::executeLoadPgmFile(void)
     return false;
   }
 
+  // Drain all remaining queued characters
   busyWaitConsole();
+
+  // Send final carriage return and drain
   feedOneCharacter('\r');
   busyWaitConsole();
 
